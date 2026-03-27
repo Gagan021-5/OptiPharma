@@ -1,6 +1,6 @@
 """
 ╔══════════════════════════════════════════════════════════════════════════════╗
-║  PharmaShield — Hybrid Computer Vision Pipeline (cv_pipeline.py)           ║
+║  OptiPharma — Hybrid Computer Vision Pipeline (cv_pipeline.py)             ║
 ║                                                                            ║
 ║  The CORE engine. Executes a two-tier verification pipeline:               ║
 ║                                                                            ║
@@ -35,7 +35,7 @@ from models import (
 )
 from gemini_client import gemini_client
 
-logger = logging.getLogger("pharmashield.pipeline")
+logger = logging.getLogger("optipharma.pipeline")
 
 # ─────────────────────────────────────────────────────────────────
 # Configuration Constants
@@ -317,7 +317,7 @@ async def run_pipeline(
     """
     start_time = time.time()
     logger.info("═" * 60)
-    logger.info("  PharmaShield Pipeline — ENGAGED")
+    logger.info("  OptiPharma Pipeline — ENGAGED")
     logger.info("═" * 60)
 
     # ── Step 1: Decode & Preprocess ─────────────────────────────

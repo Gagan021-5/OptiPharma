@@ -1,6 +1,6 @@
 /**
  * ╔══════════════════════════════════════════════════════════════╗
- * ║  PharmaShield — Scan Overlay Component                      ║
+ * ║  OptiPharma — Scan Overlay Component                        ║
  * ║  Animated scanner frame with CSS scan-line, corner brackets,║
  * ║  and pulse ring effect.                                     ║
  * ╚══════════════════════════════════════════════════════════════╝

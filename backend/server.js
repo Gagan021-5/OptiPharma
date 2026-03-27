@@ -1,6 +1,6 @@
 /**
  * ╔══════════════════════════════════════════════════════════════════════╗
- * ║  PharmaShield — Node.js Express Gateway Server                      ║
+ * ║  OptiPharma — Node.js Express Gateway Server                        ║
  * ║                                                                     ║
  * ║  The intelligent middleware between React frontend and Python       ║
  * ║  AI/CV microservice. Responsibilities:                              ║
@@ -30,7 +30,7 @@ import ScanHistory from "./models/ScanHistory.js";
 // ─────────────────────────────────────────────────────────────────
 
 const PORT = process.env.PORT || 5000;
-const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/pharmashield";
+const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/optipharma";
 const PYTHON_SERVICE_URL = process.env.PYTHON_SERVICE_URL || "http://localhost:8000";
 
 // ─────────────────────────────────────────────────────────────────
@@ -83,7 +83,7 @@ mongoose
 app.get("/health", (req, res) => {
   res.json({
     status: "operational",
-    service: "pharmashield-gateway",
+    service: "optipharma-gateway",
     version: "1.0.0",
     dbState: mongoose.connection.readyState === 1 ? "connected" : "disconnected",
   });
@@ -287,7 +287,7 @@ app.get("/api/medicines", async (req, res) => {
  */
 app.get("/", (req, res) => {
   res.json({
-    service: "PharmaShield Gateway",
+    service: "OptiPharma Gateway",
     version: "1.0.0",
     endpoints: {
       "POST /api/scan": "Upload medicine image for verification",
@@ -313,7 +313,7 @@ app.use((err, req, res, next) => {
 
 app.listen(PORT, () => {
   console.log(`\n${"═".repeat(50)}`);
-  console.log(` 🛡️  PharmaShield Gateway`);
+  console.log(` 🛡️  OptiPharma Gateway`);
   console.log(` 📡  Port: ${PORT}`);
   console.log(` 🐍  Python Service: ${PYTHON_SERVICE_URL}`);
   console.log(` 🗄️   MongoDB: ${MONGO_URI}`);

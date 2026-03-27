@@ -1,6 +1,6 @@
 /**
  * ╔══════════════════════════════════════════════════════╗
- * ║  PharmaShield — App Shell                           ║
+ * ║  OptiPharma — App Shell                             ║
  * ║  Root layout with Header + Scanner → Dashboard flow ║
  * ╚══════════════════════════════════════════════════════╝
  */
@@ -52,7 +52,7 @@ function App() {
 
       {/* ─── Footer ──────────────────────────────────────── */}
       <footer className="text-center py-4 text-pharma-slate-500 text-xs font-mono border-t border-white/5">
-        <p>PharmaShield v1.0.0 — Hybrid CV + LLM Pipeline</p>
+        <p>OptiPharma v1.0.0 — Hybrid CV + LLM Pipeline</p>
         <p className="mt-1 opacity-60">Codecure Hackathon · Team OptiPharma</p>
       </footer>
     </div>

@@ -1,7 +1,7 @@
 {
-  "name": "pharmashield-gateway",
+  "name": "optipharma-gateway",
   "version": "1.0.0",
-  "description": "PharmaShield Node.js Express Gateway + MongoDB Truth Ledger",
+  "description": "OptiPharma Node.js Express Gateway + MongoDB Truth Ledger",
   "type": "module",
   "main": "server.js",
   "scripts": {

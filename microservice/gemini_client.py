@@ -1,6 +1,6 @@
 """
 ╔══════════════════════════════════════════════════════════════════════╗
-║  PharmaShield — Gemini Vision Client                                ║
+║  OptiPharma — Gemini Vision Client                                  ║
 ║  Encapsulated Google Gemini 1.5 Pro Vision API for OCR & chemical   ║
 ║  compound verification on cropped medicine strip text regions.       ║
 ╚══════════════════════════════════════════════════════════════════════╝
@@ -17,7 +17,7 @@ from PIL import Image
 from dotenv import load_dotenv
 
 load_dotenv()
-logger = logging.getLogger("pharmashield.gemini")
+logger = logging.getLogger("optipharma.gemini")
 
 
 # ─────────────────────────────────────────────────────────────────

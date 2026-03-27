@@ -1,4 +1,4 @@
-# 🛡️ PharmaShield — Counterfeit Medicine Detector
+# 🛡️ OptiPharma — Counterfeit Medicine Detector
 
 Enterprise-grade 4-tier pharmaceutical verification platform.  
 Hybrid Computer Vision + LLM pipeline with a MongoDB "Truth Ledger" and a hyper-modern clinical UI.

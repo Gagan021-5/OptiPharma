@@ -2,7 +2,7 @@ import "dotenv/config";
 import mongoose from "mongoose";
 import Medicine from "./models/Medicine.js";
 
-const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/pharmashield";
+const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/optipharma";
 
 const SEED_DATA = [
   {

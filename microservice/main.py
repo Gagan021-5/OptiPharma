@@ -1,6 +1,6 @@
 """
 ╔══════════════════════════════════════════════════════════════════╗
-║  PharmaShield — FastAPI AI/CV Microservice Entry Point          ║
+║  OptiPharma — FastAPI AI/CV Microservice Entry Point            ║
 ║  Exposes /api/analyze endpoint for the hybrid pipeline.         ║
 ╚══════════════════════════════════════════════════════════════════╝
 """
@@ -25,14 +25,14 @@ logging.basicConfig(
     format="%(asctime)s │ %(name)-28s │ %(levelname)-7s │ %(message)s",
     datefmt="%H:%M:%S",
 )
-logger = logging.getLogger("pharmashield.api")
+logger = logging.getLogger("optipharma.api")
 
 # ─────────────────────────────────────────────────────────────────
 # FastAPI Application
 # ─────────────────────────────────────────────────────────────────
 
 app = FastAPI(
-    title="PharmaShield AI/CV Microservice",
+    title="OptiPharma AI/CV Microservice",
     description="Hybrid Computer Vision + LLM pipeline for counterfeit medicine detection",
     version="1.0.0",
 )
@@ -54,7 +54,7 @@ app.add_middleware(
 @app.get("/health")
 async def health_check():
     """Health check for the AI microservice."""
-    return {"status": "operational", "service": "pharmashield-cv", "version": "1.0.0"}
+    return {"status": "operational", "service": "optipharma-cv", "version": "1.0.0"}
 
 
 @app.post("/api/analyze", response_model=ThreatReport)
@@ -115,7 +115,7 @@ async def analyze_medicine(
 async def root():
     """Root endpoint with service info."""
     return {
-        "service": "PharmaShield AI/CV Microservice",
+        "service": "OptiPharma AI/CV Microservice",
         "version": "1.0.0",
         "endpoints": {
             "POST /api/analyze": "Run hybrid CV+LLM verification pipeline",

@@ -1,6 +1,6 @@
 """
 ╔══════════════════════════════════════════════════════════════════╗
-║  PharmaShield — Pydantic Response Models                        ║
+║  OptiPharma — Pydantic Response Models                          ║
 ║  Strict, typed contracts for the entire verification pipeline.  ║
 ╚══════════════════════════════════════════════════════════════════╝
 """

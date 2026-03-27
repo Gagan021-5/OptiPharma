@@ -1,6 +1,6 @@
 /**
  * ╔══════════════════════════════════════════════════════════════════════════╗
- * ║  PharmaShield — Threat Analysis Dashboard                              ║
+ * ║  OptiPharma — Threat Analysis Dashboard                                ║
  * ║                                                                        ║
  * ║  Post-scan results view. Displays the complete ThreatReport in a       ║
  * ║  grid-based glassmorphism layout:                                      ║

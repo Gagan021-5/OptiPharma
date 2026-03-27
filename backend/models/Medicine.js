@@ -1,6 +1,6 @@
 /**
  * ╔══════════════════════════════════════════════════════════════════╗
- * ║  PharmaShield — Medicine Schema (The Truth Ledger)              ║
+ * ║  OptiPharma — Medicine Schema (The Truth Ledger)                ║
  * ║  Stores verified pharmaceutical data: batch info, expected      ║
  * ║  chemical compounds, expiry dates, and reference logo paths.    ║
  * ╚══════════════════════════════════════════════════════════════════╝

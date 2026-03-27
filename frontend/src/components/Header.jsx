@@ -1,6 +1,6 @@
 /**
  * ╔══════════════════════════════════════════════════════╗
- * ║  PharmaShield — Header Component                    ║
+ * ║  OptiPharma — Header Component                      ║
  * ║  Clinical top bar with branding + live status       ║
  * ╚══════════════════════════════════════════════════════╝
  */
@@ -48,7 +48,7 @@ export default function Header({ isScanning, scanResult }) {
 
           <div>
             <h1 className="text-lg font-bold tracking-tight text-white">
-              Pharma<span className="text-cyan-400">Shield</span>
+              Opti<span className="text-cyan-400">Pharma</span>
             </h1>
             <p className="text-[10px] font-mono text-pharma-slate-500 uppercase tracking-widest">
               Counterfeit Detection System

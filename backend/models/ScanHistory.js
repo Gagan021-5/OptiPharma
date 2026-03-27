@@ -1,6 +1,6 @@
 /**
  * ╔══════════════════════════════════════════════════════════════════╗
- * ║  PharmaShield — Scan History Schema                             ║
+ * ║  OptiPharma — Scan History Schema                               ║
  * ║  Logs every scan for analytics, audit trails, and compliance.   ║
  * ╚══════════════════════════════════════════════════════════════════╝
  */

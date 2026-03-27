@@ -1,6 +1,6 @@
 /**
  * ╔══════════════════════════════════════════════════════════════════════╗
- * ║  PharmaShield — Scanner Component                                   ║
+ * ║  OptiPharma — Scanner Component                                     ║
  * ║                                                                     ║
  * ║  The primary interaction component. Features:                       ║
  * ║  • Live webcam feed with react-webcam                               ║
@@ -108,7 +108,7 @@ export default function Scanner({ onScanComplete, isScanning, setIsScanning }) {
       onScanComplete(report);
     } catch (err) {
       console.error('Scan failed:', err);
-      setError(err.message || 'Failed to connect to PharmaShield backend');
+      setError(err.message || 'Failed to connect to OptiPharma backend');
       setIsScanning(false);
     }
   };
