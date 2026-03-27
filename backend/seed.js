@@ -1,23 +1,8 @@
-/**
- * ╔══════════════════════════════════════════════════════════════════╗
- * ║  PharmaShield — Database Seeder                                 ║
- * ║  Populates MongoDB with realistic mock pharmaceutical data      ║
- * ║  for hackathon demonstration.                                   ║
- * ║                                                                 ║
- * ║  Usage: node seed.js                                            ║
- * ╚══════════════════════════════════════════════════════════════════╝
- */
-
-require("dotenv").config();
-const mongoose = require("mongoose");
-const Medicine = require("./models/Medicine");
+import "dotenv/config";
+import mongoose from "mongoose";
+import Medicine from "./models/Medicine.js";
 
 const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/pharmashield";
-
-// ─────────────────────────────────────────────────────────────────
-// Mock Pharmaceutical Data — The Truth Ledger
-// Each entry represents a VERIFIED, authentic medicine batch.
-// ─────────────────────────────────────────────────────────────────
 
 const SEED_DATA = [
   {

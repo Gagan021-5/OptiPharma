@@ -6,7 +6,7 @@
  * ╚══════════════════════════════════════════════════════════════════╝
  */
 
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
 const MedicineSchema = new mongoose.Schema(
   {
@@ -77,4 +77,6 @@ const MedicineSchema = new mongoose.Schema(
 // Compound text index for search
 MedicineSchema.index({ brandName: "text", manufacturer: "text" });
 
-module.exports = mongoose.model("Medicine", MedicineSchema);
+const Medicine = mongoose.model("Medicine", MedicineSchema);
+
+export default Medicine;

@@ -13,17 +13,17 @@
  * ╚══════════════════════════════════════════════════════════════════════╝
  */
 
-require("dotenv").config();
-const express = require("express");
-const cors = require("cors");
-const multer = require("multer");
-const axios = require("axios");
-const FormData = require("form-data");
-const mongoose = require("mongoose");
+import "dotenv/config";
+import express from "express";
+import cors from "cors";
+import multer from "multer";
+import axios from "axios";
+import FormData from "form-data";
+import mongoose from "mongoose";
 
 // Models
-const Medicine = require("./models/Medicine");
-const ScanHistory = require("./models/ScanHistory");
+import Medicine from "./models/Medicine.js";
+import ScanHistory from "./models/ScanHistory.js";
 
 // ─────────────────────────────────────────────────────────────────
 // Configuration

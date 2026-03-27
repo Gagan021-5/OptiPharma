@@ -5,7 +5,7 @@
  * ╚══════════════════════════════════════════════════════════════════╝
  */
 
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
 const ScanHistorySchema = new mongoose.Schema({
   // Batch number scanned (may be "UNKNOWN" if OCR fails)
@@ -93,4 +93,6 @@ const ScanHistorySchema = new mongoose.Schema({
 // TTL index: auto-delete scan logs older than 90 days (compliance)
 ScanHistorySchema.index({ scannedAt: 1 }, { expireAfterSeconds: 90 * 24 * 60 * 60 });
 
-module.exports = mongoose.model("ScanHistory", ScanHistorySchema);
+const ScanHistory = mongoose.model("ScanHistory", ScanHistorySchema);
+
+export default ScanHistory;
