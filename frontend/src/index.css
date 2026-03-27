@@ -1,0 +1,185 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ═══════════════════════════════════════════════════════════
+   PharmaShield — Global Styles
+   Clinical, hyper-modern medical device aesthetic
+   ═══════════════════════════════════════════════════════════ */
+
+@layer base {
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background-color: #0a0f1a;
+    color: #e2e8f0;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Custom scrollbar — clinical slate */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #111827;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #475569;
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #64748b;
+  }
+}
+
+@layer components {
+  /* ─── Glassmorphism Card ──────────────────────────────────── */
+  .glass-card {
+    @apply relative rounded-2xl border border-white/10 
+           bg-white/5 backdrop-blur-xl 
+           shadow-lg shadow-black/20;
+  }
+
+  .glass-card-hover {
+    @apply glass-card transition-all duration-300 
+           hover:border-white/20 hover:bg-white/[0.08] 
+           hover:shadow-xl hover:shadow-black/30;
+  }
+
+  /* ─── Scanning Overlay ───────────────────────────────────── */
+  .scan-line {
+    position: absolute;
+    left: 5%;
+    width: 90%;
+    height: 2px;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      #06b6d4 20%,
+      #22d3ee 50%,
+      #06b6d4 80%,
+      transparent 100%
+    );
+    box-shadow: 0 0 15px #06b6d4, 0 0 40px rgba(6, 182, 212, 0.4);
+    animation: scanLine 2.5s ease-in-out infinite;
+    z-index: 10;
+  }
+
+  /* ─── Corner Brackets (Scanner Frame) ────────────────────── */
+  .scanner-corner {
+    position: absolute;
+    width: 24px;
+    height: 24px;
+    border-color: #06b6d4;
+    z-index: 10;
+  }
+  .scanner-corner.top-left {
+    top: 12px; left: 12px;
+    border-top: 2px solid;
+    border-left: 2px solid;
+  }
+  .scanner-corner.top-right {
+    top: 12px; right: 12px;
+    border-top: 2px solid;
+    border-right: 2px solid;
+  }
+  .scanner-corner.bottom-left {
+    bottom: 12px; left: 12px;
+    border-bottom: 2px solid;
+    border-left: 2px solid;
+  }
+  .scanner-corner.bottom-right {
+    bottom: 12px; right: 12px;
+    border-bottom: 2px solid;
+    border-right: 2px solid;
+  }
+
+  /* ─── Verdict Banners ────────────────────────────────────── */
+  .verdict-verified {
+    @apply bg-gradient-to-r from-emerald-600/20 to-emerald-500/10
+           border border-emerald-500/40 text-emerald-400;
+  }
+
+  .verdict-counterfeit {
+    @apply bg-gradient-to-r from-red-600/20 to-red-500/10
+           border border-red-500/40 text-red-400;
+  }
+
+  .verdict-inconclusive {
+    @apply bg-gradient-to-r from-amber-600/20 to-amber-500/10
+           border border-amber-500/40 text-amber-400;
+  }
+
+  /* ─── SSIM Gauge ─────────────────────────────────────────── */
+  .gauge-track {
+    @apply w-full h-3 rounded-full bg-pharma-slate-700 overflow-hidden;
+  }
+
+  .gauge-fill {
+    @apply h-full rounded-full transition-all duration-1000 ease-out;
+  }
+
+  /* ─── Shimmer Loading ────────────────────────────────────── */
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.05) 50%,
+      transparent 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 2s linear infinite;
+  }
+
+  /* ─── Status Dot ─────────────────────────────────────────── */
+  .status-dot {
+    @apply w-2 h-2 rounded-full;
+  }
+  .status-dot.online {
+    @apply bg-emerald-400 shadow-lg shadow-emerald-400/50;
+    animation: glowPulse 2s ease-in-out infinite;
+  }
+
+  /* ─── Button Styles ──────────────────────────────────────── */
+  .btn-primary {
+    @apply relative px-8 py-3 rounded-xl font-semibold text-sm uppercase tracking-wider
+           bg-gradient-to-r from-cyan-600 to-cyan-500
+           text-white shadow-lg shadow-cyan-500/25
+           transition-all duration-300
+           hover:shadow-xl hover:shadow-cyan-500/40 hover:scale-[1.02]
+           active:scale-95
+           disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100;
+  }
+
+  .btn-danger {
+    @apply relative px-8 py-3 rounded-xl font-semibold text-sm uppercase tracking-wider
+           bg-gradient-to-r from-red-600 to-red-500
+           text-white shadow-lg shadow-red-500/25
+           transition-all duration-300
+           hover:shadow-xl hover:shadow-red-500/40 hover:scale-[1.02]
+           active:scale-95;
+  }
+}
+
+/* ─── Keyframe Animations ──────────────────────────────────── */
+@keyframes scanLine {
+  0%, 100% { top: 5%; opacity: 0.4; }
+  50% { top: 90%; opacity: 1; }
+}
+
+@keyframes glowPulse {
+  0%, 100% { box-shadow: 0 0 5px rgba(16, 185, 129, 0.3); }
+  50% { box-shadow: 0 0 25px rgba(16, 185, 129, 0.6); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
