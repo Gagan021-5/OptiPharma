@@ -40,4 +40,4 @@ npm run dev           # starts on :5173
 | `backend-node` | `MONGO_URI` | MongoDB connection string |
 | `backend-node` | `PYTHON_SERVICE_URL` | Python service URL (default `http://localhost:8000`) |
 
-## Hackathon: Codecure — Team OptiPharma
+## Hackathon: Codecure — Team Busted
