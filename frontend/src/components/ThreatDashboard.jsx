@@ -1,32 +1,97 @@
-/**
- * ╔══════════════════════════════════════════════════════════════════════════╗
- * ║  OptiPharma — Threat Analysis Dashboard                                ║
- * ║                                                                        ║
- * ║  Post-scan results view. Displays the complete ThreatReport in a       ║
- * ║  grid-based glassmorphism layout:                                      ║
- * ║  • Final Verdict banner (Emerald/Crimson/Amber)                        ║
- * ║  • SSIM score gauge with animated fill                                 ║
- * ║  • Extracted text display                                              ║
- * ║  • Chemical compound match/mismatch indicators                         ║
- * ║  • Pipeline metadata (processing time, version)                        ║
- * ╚══════════════════════════════════════════════════════════════════════════╝
- */
-
 import { motion } from 'framer-motion';
 
-// ─── Animation Variants ──────────────────────────────────────
 const container = {
   hidden: { opacity: 0 },
   show: {
     opacity: 1,
-    transition: { staggerChildren: 0.08, delayChildren: 0.1 },
+    transition: { staggerChildren: 0.08, delayChildren: 0.08 },
   },
 };
 
 const item = {
-  hidden: { opacity: 0, y: 20 },
-  show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 200, damping: 20 } },
+  hidden: { opacity: 0, y: 18 },
+  show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 180, damping: 22 } },
 };
+
+function getVerdictConfig(verdict) {
+  if (verdict === 'VERIFIED') {
+    return {
+      label: 'Verified - Authentic',
+      panelClass: 'verdict-verified',
+      accentClass: 'text-emerald-300',
+      iconSurfaceClass: 'border border-emerald-400/20 bg-emerald-500/15',
+      icon: (
+        <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.1}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+        </svg>
+      ),
+    };
+  }
+
+  if (verdict === 'COUNTERFEIT') {
+    return {
+      label: 'Counterfeit Detected',
+      panelClass: 'verdict-counterfeit',
+      accentClass: 'text-red-300',
+      iconSurfaceClass: 'border border-red-400/20 bg-red-500/15',
+      icon: (
+        <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.1}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m0 3.75h.008v.008H12v-.008zm8.25-.75L13.5 4.5a1.732 1.732 0 00-3 0L3.75 15.75A1.732 1.732 0 005.25 18h13.5a1.732 1.732 0 001.5-2.25z" />
+        </svg>
+      ),
+    };
+  }
+
+  return {
+    label: 'Inconclusive',
+    panelClass: 'verdict-inconclusive',
+    accentClass: 'text-amber-300',
+    iconSurfaceClass: 'border border-amber-400/20 bg-amber-500/15',
+    icon: (
+      <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.1}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9a3 3 0 10-3-3m3 3a3 3 0 013 3c0 1.07-.56 2.01-1.403 2.542-.704.445-1.097 1.018-1.097 1.708V17.25m.008 3h.008v.008h-.008v-.008z" />
+      </svg>
+    ),
+  };
+}
+
+function getSSIMColor(score) {
+  if (score >= 95) return 'bg-emerald-500';
+  if (score >= 80) return 'bg-amber-500';
+  return 'bg-red-500';
+}
+
+function getSummaryChips(ssim, extractedText, compoundVerification) {
+  return [
+    {
+      label: 'SSIM gate',
+      value: ssim?.passed_gate ? 'Passed' : 'Blocked',
+      className: ssim?.passed_gate
+        ? 'border-emerald-400/20 bg-emerald-500/10 text-emerald-200'
+        : 'border-red-400/20 bg-red-500/10 text-red-200',
+    },
+    {
+      label: 'OCR',
+      value: extractedText ? 'Captured' : 'Skipped',
+      className: extractedText
+        ? 'border-cyan-400/20 bg-cyan-500/10 text-cyan-200'
+        : 'border-white/10 bg-white/[0.04] text-pharma-slate-300',
+    },
+    {
+      label: 'Ledger',
+      value: compoundVerification
+        ? compoundVerification.match
+          ? 'Matched'
+          : 'Mismatch'
+        : 'Skipped',
+      className: compoundVerification?.match
+        ? 'border-emerald-400/20 bg-emerald-500/10 text-emerald-200'
+        : compoundVerification
+          ? 'border-red-400/20 bg-red-500/10 text-red-200'
+          : 'border-white/10 bg-white/[0.04] text-pharma-slate-300',
+    },
+  ];
+}
 
 export default function ThreatDashboard({ report, onNewScan }) {
   if (!report) return null;
@@ -34,301 +99,286 @@ export default function ThreatDashboard({ report, onNewScan }) {
   const {
     verdict,
     confidence,
-    rejection_reason,
+    rejection_reason: rejectionReason,
     ssim,
-    compound_verification,
-    extracted_text,
-    processing_time_ms,
-    pipeline_version,
+    compound_verification: compoundVerification,
+    extracted_text: extractedText,
+    processing_time_ms: processingTimeMs,
+    pipeline_version: pipelineVersion,
+    timestamp,
   } = report;
 
-  const isVerified = verdict === 'VERIFIED';
-  const isCounterfeit = verdict === 'COUNTERFEIT';
+  const verdictConfig = getVerdictConfig(verdict);
+  const confidenceValue = typeof confidence === 'number' ? confidence.toFixed(1) : '--';
+  const ssimScore = typeof ssim?.score === 'number' ? (ssim.score * 100).toFixed(1) : '0.0';
+  const ssimNumericScore = Number.parseFloat(ssimScore);
+  const matchPercentage = typeof compoundVerification?.match_percentage === 'number'
+    ? compoundVerification.match_percentage.toFixed(1)
+    : '--';
+  const timestampLabel = timestamp
+    ? new Date(timestamp).toLocaleString([], {
+        day: '2-digit',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    : '--';
+  const summaryChips = getSummaryChips(ssim, extractedText, compoundVerification);
 
-  // ─── Verdict Config ────────────────────────────────────────
-  const verdictConfig = {
-    VERIFIED: {
-      label: 'VERIFIED — AUTHENTIC',
-      icon: '✓',
-      className: 'verdict-verified',
-      glow: 'shadow-emerald-500/20',
-      color: 'text-emerald-400',
-      bg: 'bg-emerald-500',
-    },
-    COUNTERFEIT: {
-      label: 'COUNTERFEIT DETECTED',
-      icon: '✗',
-      className: 'verdict-counterfeit',
-      glow: 'shadow-red-500/20',
-      color: 'text-red-400',
-      bg: 'bg-red-500',
-    },
-    INCONCLUSIVE: {
-      label: 'INCONCLUSIVE',
-      icon: '?',
-      className: 'verdict-inconclusive',
-      glow: 'shadow-amber-500/20',
-      color: 'text-amber-400',
-      bg: 'bg-amber-500',
-    },
-  };
-
-  const vc = verdictConfig[verdict] || verdictConfig.INCONCLUSIVE;
-
-  // ─── SSIM gauge color ──────────────────────────────────────
-  const getSSIMColor = (score) => {
-    if (score >= 0.95) return 'bg-emerald-500';
-    if (score >= 0.80) return 'bg-amber-500';
-    return 'bg-red-500';
-  };
+  const overviewCopy = rejectionReason || (
+    verdict === 'VERIFIED'
+      ? 'Pack identity, extracted text, and compound expectations aligned with the reference profile.'
+      : verdict === 'COUNTERFEIT'
+        ? 'The strip diverged from the expected visual or chemical profile and should be isolated for review.'
+        : 'Some checks completed, but the evidence was not strong enough to confirm authenticity.'
+  );
 
   return (
     <motion.div
       variants={container}
       initial="hidden"
       animate="show"
-      className="space-y-6"
+      className="space-y-6 sm:space-y-8"
     >
-      {/* ═══ VERDICT BANNER ═══════════════════════════════════ */}
-      <motion.div variants={item}>
-        <div className={`${vc.className} rounded-2xl p-6 shadow-xl ${vc.glow}`}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <motion.div
-                className={`w-14 h-14 rounded-2xl ${vc.bg}/20 flex items-center justify-center`}
-                initial={{ scale: 0, rotate: -180 }}
-                animate={{ scale: 1, rotate: 0 }}
-                transition={{ type: 'spring', stiffness: 200, delay: 0.3 }}
-              >
-                <span className={`text-3xl font-bold ${vc.color}`}>{vc.icon}</span>
-              </motion.div>
-              <div>
-                <motion.h2
-                  className={`text-xl font-bold tracking-tight ${vc.color}`}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.4 }}
-                >
-                  {vc.label}
-                </motion.h2>
-                {rejection_reason && (
-                  <p className="text-sm mt-0.5 opacity-70">{rejection_reason}</p>
-                )}
+      <motion.section id="results-overview" variants={item} className="section-anchor">
+        <div className={`${verdictConfig.panelClass} overflow-hidden rounded-[2rem] p-5 shadow-xl sm:p-7 lg:p-8`}>
+          <div className="flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
+              <div className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-[1.5rem] ${verdictConfig.iconSurfaceClass}`}>
+                <span className={verdictConfig.accentClass}>{verdictConfig.icon}</span>
+              </div>
+
+              <div className="max-w-3xl">
+                <p className="text-[10px] font-mono uppercase tracking-[0.24em] text-white/60">Verification result</p>
+                <h2 className={`mt-2 text-3xl font-semibold tracking-tight sm:text-4xl ${verdictConfig.accentClass}`}>
+                  {verdictConfig.label}
+                </h2>
+                <p className="mt-3 max-w-2xl text-sm leading-6 text-white/75 sm:text-base">
+                  {overviewCopy}
+                </p>
+
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {summaryChips.map((chip) => (
+                    <div
+                      key={chip.label}
+                      className={`rounded-full border px-3 py-1.5 text-xs font-medium ${chip.className}`}
+                    >
+                      {chip.label}: {chip.value}
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
 
-            {/* Confidence Score */}
-            <motion.div
-              className="text-right"
-              initial={{ opacity: 0, scale: 0.5 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.5 }}
-            >
-              <p className="text-[10px] font-mono uppercase tracking-widest opacity-60">Confidence</p>
-              <p className={`text-3xl font-bold font-mono ${vc.color}`}>
-                {confidence?.toFixed(1)}%
-              </p>
-            </motion.div>
+            <div className="grid gap-3 sm:grid-cols-2 xl:w-[340px]">
+              <div className="rounded-[1.5rem] border border-white/10 bg-black/10 px-4 py-4">
+                <p className="text-[10px] font-mono uppercase tracking-[0.24em] text-white/55">Confidence</p>
+                <p className={`mt-3 text-4xl font-semibold ${verdictConfig.accentClass}`}>{confidenceValue}%</p>
+                <p className="mt-2 text-sm text-white/60">Combined signal from the vision, OCR, and ledger checks.</p>
+              </div>
+
+              <div className="rounded-[1.5rem] border border-white/10 bg-black/10 px-4 py-4">
+                <p className="text-[10px] font-mono uppercase tracking-[0.24em] text-white/55">Processing time</p>
+                <p className="mt-3 text-4xl font-semibold text-white">
+                  {typeof processingTimeMs === 'number' ? processingTimeMs.toFixed(0) : '--'}
+                  <span className="ml-1 text-base text-white/55">ms</span>
+                </p>
+                <p className="mt-2 text-sm text-white/60">Includes preprocessing, OCR, and backend verification.</p>
+              </div>
+            </div>
           </div>
         </div>
-      </motion.div>
+      </motion.section>
 
-      {/* ═══ METRICS GRID ═════════════════════════════════════ */}
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-
-        {/* ─── SSIM Score Card ──────────────────────── */}
-        <motion.div variants={item} className="glass-card p-5">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-xs font-mono text-pharma-slate-500 uppercase tracking-wider">
-              SSIM Analysis
-            </h3>
-            <span className={`text-xs font-mono font-bold ${
-              ssim?.passed_gate ? 'text-emerald-400' : 'text-red-400'
+      <div id="results-metrics" className="section-anchor grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+        <motion.section variants={item} className="glass-card p-5">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-mono uppercase tracking-[0.24em] text-pharma-slate-500">Visual identity</p>
+              <h3 className="mt-1 text-lg font-semibold text-white">SSIM analysis</h3>
+            </div>
+            <span className={`rounded-full border px-3 py-1 text-[10px] font-mono uppercase tracking-[0.2em] ${
+              ssim?.passed_gate
+                ? 'border-emerald-400/20 bg-emerald-500/10 text-emerald-300'
+                : 'border-red-400/20 bg-red-500/10 text-red-300'
             }`}>
-              {ssim?.passed_gate ? 'GATE OPEN' : 'GATE CLOSED'}
+              {ssim?.passed_gate ? 'Gate open' : 'Gate closed'}
             </span>
           </div>
 
-          {/* Score Display */}
-          <div className="flex items-end gap-2 mb-3">
-            <span className="text-4xl font-bold font-mono text-white">
-              {ssim?.score ? (ssim.score * 100).toFixed(1) : '0'}
-            </span>
-            <span className="text-lg text-pharma-slate-500 mb-1">%</span>
+          <div className="mt-6 flex items-end gap-2">
+            <span className="text-5xl font-semibold text-white">{ssimScore}</span>
+            <span className="mb-1 text-lg text-pharma-slate-500">%</span>
           </div>
 
-          {/* Gauge Bar */}
-          <div className="gauge-track">
-            <motion.div
-              className={`gauge-fill ${getSSIMColor(ssim?.score || 0)}`}
-              initial={{ width: 0 }}
-              animate={{ width: `${(ssim?.score || 0) * 100}%` }}
-              transition={{ duration: 1.2, ease: 'easeOut', delay: 0.3 }}
-            />
-          </div>
+          <div className="mt-5">
+            <div className="gauge-track">
+              <motion.div
+                className={`gauge-fill ${getSSIMColor(ssimNumericScore)}`}
+                initial={{ width: 0 }}
+                animate={{ width: `${ssimNumericScore}%` }}
+                transition={{ duration: 1.1, ease: 'easeOut', delay: 0.2 }}
+              />
+            </div>
 
-          {/* Threshold Marker */}
-          <div className="relative mt-1">
-            <div className="absolute left-[95%] -translate-x-1/2 flex flex-col items-center">
-              <div className="w-[1px] h-2 bg-white/30" />
-              <span className="text-[9px] text-pharma-slate-600 mt-0.5">95%</span>
+            <div className="relative mt-2 h-4">
+              <div className="absolute left-[95%] top-0 -translate-x-1/2 text-center">
+                <div className="mx-auto h-2 w-px bg-white/30" />
+                <span className="block text-[10px] text-pharma-slate-600">95%</span>
+              </div>
             </div>
           </div>
 
-          <div className="mt-3 flex items-center gap-2 text-[10px] text-pharma-slate-600 font-mono">
-            <span>REF: {ssim?.reference_logo_used || 'N/A'}</span>
+          <div className="mt-5 rounded-[1.25rem] border border-white/10 bg-white/[0.03] p-4">
+            <p className="text-[10px] font-mono uppercase tracking-[0.24em] text-pharma-slate-500">Reference logo</p>
+            <p className="mt-2 text-sm text-white">{ssim?.reference_logo_used || 'Not available'}</p>
           </div>
-        </motion.div>
+        </motion.section>
 
-        {/* ─── Extracted Text Card ──────────────────── */}
-        <motion.div variants={item} className="glass-card p-5">
-          <h3 className="text-xs font-mono text-pharma-slate-500 uppercase tracking-wider mb-3">
-            Extracted Text (OCR)
-          </h3>
+        <motion.section variants={item} className="glass-card p-5">
+          <p className="text-[10px] font-mono uppercase tracking-[0.24em] text-pharma-slate-500">OCR output</p>
+          <h3 className="mt-1 text-lg font-semibold text-white">Extracted text</h3>
 
-          {extracted_text ? (
-            <div className="space-y-3">
-              <div>
-                <span className="text-[10px] text-pharma-slate-600 font-mono">BATCH NO.</span>
-                <p className="text-sm font-mono text-white font-medium mt-0.5">
-                  {extracted_text.batch_number || 'N/A'}
-                </p>
-              </div>
-              <div>
-                <span className="text-[10px] text-pharma-slate-600 font-mono">BRAND</span>
-                <p className="text-sm font-mono text-white font-medium mt-0.5">
-                  {extracted_text.brand_name || 'N/A'}
-                </p>
-              </div>
-              {extracted_text.raw_text && (
-                <div>
-                  <span className="text-[10px] text-pharma-slate-600 font-mono">RAW TEXT</span>
-                  <div className="mt-1 p-2 rounded-lg bg-pharma-slate-800 border border-white/5 max-h-24 overflow-y-auto">
-                    <p className="text-[11px] font-mono text-pharma-slate-500 break-all leading-relaxed">
-                      {extracted_text.raw_text}
-                    </p>
-                  </div>
+          {extractedText ? (
+            <div className="mt-5 space-y-4">
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+                <div className="rounded-[1.25rem] border border-white/10 bg-white/[0.03] p-4">
+                  <p className="text-[10px] font-mono uppercase tracking-[0.24em] text-pharma-slate-500">Batch number</p>
+                  <p className="mt-2 text-sm font-semibold text-white">{extractedText.batch_number || 'Not found'}</p>
                 </div>
-              )}
+                <div className="rounded-[1.25rem] border border-white/10 bg-white/[0.03] p-4">
+                  <p className="text-[10px] font-mono uppercase tracking-[0.24em] text-pharma-slate-500">Brand</p>
+                  <p className="mt-2 text-sm font-semibold text-white">{extractedText.brand_name || 'Not found'}</p>
+                </div>
+              </div>
+
+              <div className="rounded-[1.25rem] border border-white/10 bg-pharma-slate-800/80 p-4">
+                <p className="text-[10px] font-mono uppercase tracking-[0.24em] text-pharma-slate-500">Raw text</p>
+                <div className="mt-3 max-h-40 overflow-y-auto rounded-2xl border border-white/5 bg-pharma-slate-900/60 p-3">
+                  <p className="break-words text-sm leading-6 text-pharma-slate-400">
+                    {extractedText.raw_text || 'No raw OCR text returned.'}
+                  </p>
+                </div>
+              </div>
             </div>
           ) : (
-            <div className="flex items-center justify-center h-24">
-              <p className="text-xs text-pharma-slate-600">
-                OCR skipped — SSIM gate rejected
+            <div className="mt-5 rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-5">
+              <p className="text-sm leading-6 text-pharma-slate-400">
+                OCR was skipped because the SSIM gate rejected the strip before text extraction.
               </p>
             </div>
           )}
-        </motion.div>
+        </motion.section>
 
-        {/* ─── Compound Verification Card ──────────── */}
-        <motion.div variants={item} className="glass-card p-5">
-          <h3 className="text-xs font-mono text-pharma-slate-500 uppercase tracking-wider mb-3">
-            Compound Verification
-          </h3>
+        <motion.section variants={item} className="glass-card p-5">
+          <p className="text-[10px] font-mono uppercase tracking-[0.24em] text-pharma-slate-500">Ledger check</p>
+          <h3 className="mt-1 text-lg font-semibold text-white">Compound verification</h3>
 
-          {compound_verification ? (
-            <div className="space-y-3">
-              {/* Match Status */}
-              <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${
-                compound_verification.match
-                  ? 'bg-emerald-500/10 border border-emerald-500/20'
-                  : 'bg-red-500/10 border border-red-500/20'
+          {compoundVerification ? (
+            <div className="mt-5 space-y-4">
+              <div className={`rounded-[1.5rem] border p-4 ${
+                compoundVerification.match
+                  ? 'border-emerald-400/20 bg-emerald-500/10'
+                  : 'border-red-400/20 bg-red-500/10'
               }`}>
-                <span className={`text-lg ${compound_verification.match ? 'text-emerald-400' : 'text-red-400'}`}>
-                  {compound_verification.match ? '✓' : '✗'}
-                </span>
-                <div>
-                  <p className={`text-xs font-bold ${
-                    compound_verification.match ? 'text-emerald-400' : 'text-red-400'
-                  }`}>
-                    {compound_verification.match ? 'COMPOUNDS MATCH' : 'MISMATCH DETECTED'}
-                  </p>
-                  <p className="text-[10px] text-pharma-slate-500 font-mono">
-                    {compound_verification.match_percentage?.toFixed(1)}% match rate
-                  </p>
-                </div>
+                <p className={`text-xs font-semibold uppercase tracking-[0.24em] ${
+                  compoundVerification.match ? 'text-emerald-300' : 'text-red-300'
+                }`}>
+                  {compoundVerification.match ? 'Compounds match' : 'Mismatch detected'}
+                </p>
+                <p className="mt-2 text-sm text-pharma-slate-100">{matchPercentage}% match rate against the truth ledger.</p>
               </div>
 
-              {/* Expected vs Extracted */}
-              <div className="space-y-2">
-                <div>
-                  <span className="text-[10px] text-pharma-slate-600 font-mono">EXPECTED</span>
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {compound_verification.expected_compounds?.map((c, i) => (
-                      <span key={i} className="px-2 py-0.5 rounded-md bg-white/5 border border-white/10
-                                               text-[10px] font-mono text-pharma-slate-500">
-                        {c}
-                      </span>
-                    ))}
-                    {(!compound_verification.expected_compounds?.length) && (
-                      <span className="text-[10px] text-pharma-slate-600">No data from Truth Ledger</span>
+              <div className="space-y-3">
+                <div className="rounded-[1.25rem] border border-white/10 bg-white/[0.03] p-4">
+                  <p className="text-[10px] font-mono uppercase tracking-[0.24em] text-pharma-slate-500">Expected compounds</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {compoundVerification.expected_compounds?.length ? (
+                      compoundVerification.expected_compounds.map((compound) => (
+                        <span
+                          key={compound}
+                          className="rounded-full border border-white/10 bg-pharma-slate-800 px-3 py-1 text-xs text-pharma-slate-300"
+                        >
+                          {compound}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-sm text-pharma-slate-500">No expected compounds were returned.</span>
                     )}
                   </div>
                 </div>
-                <div>
-                  <span className="text-[10px] text-pharma-slate-600 font-mono">EXTRACTED</span>
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {compound_verification.extracted_compounds?.map((c, i) => {
-                      const isMatch = compound_verification.expected_compounds?.some(
-                        (exp) => exp.toLowerCase() === c.toLowerCase()
-                      );
-                      return (
-                        <span key={i} className={`px-2 py-0.5 rounded-md text-[10px] font-mono ${
-                          isMatch
-                            ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400'
-                            : 'bg-red-500/10 border border-red-500/20 text-red-400'
-                        }`}>
-                          {c}
-                        </span>
-                      );
-                    })}
+
+                <div className="rounded-[1.25rem] border border-white/10 bg-white/[0.03] p-4">
+                  <p className="text-[10px] font-mono uppercase tracking-[0.24em] text-pharma-slate-500">Extracted compounds</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {compoundVerification.extracted_compounds?.length ? (
+                      compoundVerification.extracted_compounds.map((compound) => {
+                        const matchesExpected = compoundVerification.expected_compounds?.some(
+                          (expected) => expected.toLowerCase() === compound.toLowerCase(),
+                        );
+
+                        return (
+                          <span
+                            key={compound}
+                            className={`rounded-full border px-3 py-1 text-xs ${
+                              matchesExpected
+                                ? 'border-emerald-400/20 bg-emerald-500/10 text-emerald-200'
+                                : 'border-red-400/20 bg-red-500/10 text-red-200'
+                            }`}
+                          >
+                            {compound}
+                          </span>
+                        );
+                      })
+                    ) : (
+                      <span className="text-sm text-pharma-slate-500">No compounds were extracted from OCR.</span>
+                    )}
                   </div>
                 </div>
               </div>
             </div>
           ) : (
-            <div className="flex items-center justify-center h-24">
-              <p className="text-xs text-pharma-slate-600">
-                Verification skipped — SSIM gate rejected
+            <div className="mt-5 rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-5">
+              <p className="text-sm leading-6 text-pharma-slate-400">
+                Ledger verification was skipped because the visual gate did not pass.
               </p>
             </div>
           )}
-        </motion.div>
+        </motion.section>
       </div>
 
-      {/* ═══ PIPELINE METADATA BAR ════════════════════════════ */}
-      <motion.div variants={item}>
-        <div className="glass-card px-5 py-3 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex flex-wrap items-center gap-6 text-[10px] font-mono text-pharma-slate-500">
-            <div className="flex items-center gap-1.5">
-              <span className="opacity-60">⏱</span>
-              <span>{processing_time_ms?.toFixed(0) || '—'}ms</span>
+      <motion.section id="results-session" variants={item} className="section-anchor">
+        <div className="glass-card px-5 py-4 sm:px-6 sm:py-5">
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="rounded-[1.25rem] border border-white/10 bg-white/[0.03] px-4 py-3">
+                <p className="text-[10px] font-mono uppercase tracking-[0.24em] text-pharma-slate-500">Timestamp</p>
+                <p className="mt-2 text-sm text-white">{timestampLabel}</p>
+              </div>
+              <div className="rounded-[1.25rem] border border-white/10 bg-white/[0.03] px-4 py-3">
+                <p className="text-[10px] font-mono uppercase tracking-[0.24em] text-pharma-slate-500">Pipeline</p>
+                <p className="mt-2 text-sm text-white">v{pipelineVersion || '1.0.0'}</p>
+              </div>
+              <div className="rounded-[1.25rem] border border-white/10 bg-white/[0.03] px-4 py-3">
+                <p className="text-[10px] font-mono uppercase tracking-[0.24em] text-pharma-slate-500">SSIM threshold</p>
+                <p className="mt-2 text-sm text-white">95%</p>
+              </div>
+              <div className="rounded-[1.25rem] border border-white/10 bg-white/[0.03] px-4 py-3">
+                <p className="text-[10px] font-mono uppercase tracking-[0.24em] text-pharma-slate-500">Confidence</p>
+                <p className="mt-2 text-sm text-white">{confidenceValue}%</p>
+              </div>
             </div>
-            <div className="flex items-center gap-1.5">
-              <span className="opacity-60">🔧</span>
-              <span>Pipeline v{pipeline_version || '1.0.0'}</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="opacity-60">📋</span>
-              <span>{report.timestamp ? new Date(report.timestamp).toLocaleTimeString() : '—'}</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="opacity-60">🛡️</span>
-              <span>SSIM Threshold: 95%</span>
-            </div>
-          </div>
 
-          {/* New Scan Button */}
-          <button
-            onClick={onNewScan}
-            className="px-5 py-2 rounded-xl text-xs font-semibold uppercase tracking-wider
-                       bg-white/5 border border-white/10 text-white
-                       hover:bg-white/10 hover:border-white/20 transition-all"
-          >
-            ← New Scan
-          </button>
+            <button
+              type="button"
+              onClick={onNewScan}
+              className="btn-secondary inline-flex w-full items-center justify-center sm:w-auto"
+            >
+              Start a new scan
+            </button>
+          </div>
         </div>
-      </motion.div>
+      </motion.section>
     </motion.div>
   );
 }

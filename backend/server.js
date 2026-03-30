@@ -67,13 +67,8 @@ function buildTruthLedgerMatch(medicine) {
   };
 }
 
-// ─────────────────────────────────────────────────────────────────
-// Express App Setup
-// ─────────────────────────────────────────────────────────────────
-
 const app = express();
 
-// CORS — allow frontend dev server
 app.use(
   cors({
     origin: ["http://localhost:5173", "http://localhost:3000", "*"],
@@ -84,7 +79,6 @@ app.use(
 
 app.use(express.json());
 
-// Multer — in-memory storage for uploaded images
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB max
@@ -98,22 +92,13 @@ const upload = multer({
   },
 });
 
-// ─────────────────────────────────────────────────────────────────
-// MongoDB Connection
-// ─────────────────────────────────────────────────────────────────
 
 mongoose
   .connect(MONGO_URI)
   .then(() => console.log("✓ Connected to MongoDB:", SAFE_MONGO_URI))
   .catch((err) => console.error("✗ MongoDB connection failed:", err.message));
 
-// ─────────────────────────────────────────────────────────────────
-// Routes
-// ─────────────────────────────────────────────────────────────────
 
-/**
- * Health Check
- */
 app.get("/health", (req, res) => {
   res.json({
     status: "operational",
@@ -123,15 +108,7 @@ app.get("/health", (req, res) => {
   });
 });
 
-/**
- * POST /api/scan — Main Scanning Endpoint
- *
- * Flow:
- *   1. Receive image upload from frontend
- *   2. (Optional) batch_number in body → look up expected compounds in MongoDB
- *   3. Forward image + expected compounds to Python AI/CV microservice
- *   4. Receive threat report → log to ScanHistory → return to frontend
- */
+
 app.post("/api/scan", upload.single("image"), async (req, res) => {
   const startTime = Date.now();
 
@@ -384,5 +361,4 @@ app.listen(PORT, () => {
   console.log(` 📡  Port: ${PORT}`);
   console.log(` 🐍  Python Service: ${PYTHON_SERVICE_URL}`);
   console.log(` 🗄️   MongoDB: ${SAFE_MONGO_URI}`);
-  console.log("═".repeat(50));
 });

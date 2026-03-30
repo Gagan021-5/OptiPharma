@@ -370,13 +370,12 @@ async def run_pipeline(
     logger.info("✓ GATE OPEN — SSIM passed. Proceeding to Tier 2 (Gemini)...")
 
     # ── Step 4: Gemini OCR ──────────────────────────────────────
-    logger.info("[4/5] Cropping text region and sending to Gemini Vision...")
+    logger.info("[4/5] Sending full high-res image to Gemini 2.5 Flash...")
     
-    # Extract text region from the aligned (color) image
-    text_crop = extract_region(aligned, TEXT_REGION)
-    
-    # Convert OpenCV BGR to PIL RGB for Gemini
-    text_pil = Image.fromarray(cv2.cvtColor(text_crop, cv2.COLOR_BGR2RGB))
+    # HACKATHON FIX: Instead of risking a bad OpenCV crop cutting off the text,
+    # we send the entire raw high-res image directly to Gemini 2.5 Flash.
+    # The multimodal AI is smart enough to find the text anywhere in the frame.
+    text_pil = Image.fromarray(cv2.cvtColor(raw_image, cv2.COLOR_BGR2RGB))
     
     # Call Gemini for text extraction
     gemini_result = await gemini_client.extract_text(text_pil)

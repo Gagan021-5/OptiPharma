@@ -1,47 +1,55 @@
-/**
- * ╔══════════════════════════════════════════════════════╗
- * ║  OptiPharma — App Shell                             ║
- * ║  Root layout with Header + Scanner → Dashboard flow ║
- * ╚══════════════════════════════════════════════════════╝
- */
-
 import { useState } from 'react';
 import Header from './components/Header';
 import Scanner from './components/Scanner';
 import ThreatDashboard from './components/ThreatDashboard';
 
 function App() {
-  // Scan result state — flows from Scanner → ThreatDashboard
   const [scanResult, setScanResult] = useState(null);
   const [isScanning, setIsScanning] = useState(false);
 
-  /** Called when Scanner completes analysis and receives a ThreatReport */
   const handleScanComplete = (result) => {
     setScanResult(result);
     setIsScanning(false);
   };
 
-  /** Reset to scanner view */
   const handleNewScan = () => {
     setScanResult(null);
     setIsScanning(false);
   };
 
-  return (
-    <div className="min-h-screen bg-pharma-slate-900 flex flex-col">
-      {/* ─── Header ──────────────────────────────────────── */}
-      <Header isScanning={isScanning} scanResult={scanResult} />
+  const navItems = scanResult
+    ? [
+        { label: 'Overview', href: '#results-overview' },
+        { label: 'Metrics', href: '#results-metrics' },
+        { label: 'Session', href: '#results-session' },
+      ]
+    : [
+        { label: 'Workspace', href: '#scanner-workspace' },
+        { label: 'Pipeline', href: '#scanner-workflow' },
+        { label: 'Guidance', href: '#scanner-tips' },
+      ];
 
-      {/* ─── Main Content ────────────────────────────────── */}
-      <main className="flex-1 container mx-auto px-4 py-6 max-w-6xl">
+  return (
+    <div className="app-shell bg-pharma-slate-900 text-slate-100">
+      <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+        <div className="absolute left-1/2 top-[-18rem] h-[30rem] w-[30rem] -translate-x-1/2 rounded-full bg-cyan-500/12 blur-3xl" />
+        <div className="absolute right-[-8rem] top-1/3 h-[22rem] w-[22rem] rounded-full bg-emerald-500/8 blur-3xl" />
+        <div className="absolute bottom-[-10rem] left-[-6rem] h-[24rem] w-[24rem] rounded-full bg-sky-500/8 blur-3xl" />
+      </div>
+
+      <Header
+        isScanning={isScanning}
+        scanResult={scanResult}
+        navItems={navItems}
+      />
+
+      <main className="relative z-10 mx-auto flex w-full max-w-7xl flex-1 flex-col px-4 pb-10 pt-6 sm:px-6 sm:pb-12 sm:pt-8 lg:px-8 lg:pt-10">
         {scanResult ? (
-          /* ─── Threat Dashboard (post-scan) ──────────── */
           <ThreatDashboard
             report={scanResult}
             onNewScan={handleNewScan}
           />
         ) : (
-          /* ─── Scanner (pre-scan) ────────────────────── */
           <Scanner
             onScanComplete={handleScanComplete}
             isScanning={isScanning}
@@ -50,10 +58,14 @@ function App() {
         )}
       </main>
 
-      {/* ─── Footer ──────────────────────────────────────── */}
-      <footer className="text-center py-4 text-pharma-slate-500 text-xs font-mono border-t border-white/5">
-        <p>OptiPharma v1.0.0 — Hybrid CV + LLM Pipeline</p>
-        <p className="mt-1 opacity-60">Codecure Hackathon · Team OptiPharma</p>
+      <footer className="relative z-10 border-t border-white/6 bg-pharma-slate-900/70 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-4 text-center text-xs text-pharma-slate-500 sm:px-6 sm:py-5 lg:px-8 lg:flex-row lg:items-center lg:justify-between lg:text-left">
+          <p className="font-mono uppercase tracking-[0.24em] text-pharma-slate-500/90">
+            OptiPharma v1.0.0
+          </p>
+          <p>Operational platform for counterfeit medicine verification.</p>
+          <p className="text-pharma-slate-600">Codecure Hackathon · Team OptiPharma</p>
+        </div>
       </footer>
     </div>
   );
