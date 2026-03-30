@@ -7,7 +7,8 @@
 
 import mongoose from "mongoose";
 
-const ScanHistorySchema = new mongoose.Schema({
+const ScanHistorySchema = new mongoose.Schema(
+  {
   // Batch number scanned (may be "UNKNOWN" if OCR fails)
   batchNumber: {
     type: String,
@@ -86,9 +87,12 @@ const ScanHistorySchema = new mongoose.Schema({
   scannedAt: {
     type: Date,
     default: Date.now,
-    index: true,
   },
-});
+  },
+  {
+    collection: "scanhistory",
+  }
+);
 
 // TTL index: auto-delete scan logs older than 90 days (compliance)
 ScanHistorySchema.index({ scannedAt: 1 }, { expireAfterSeconds: 90 * 24 * 60 * 60 });

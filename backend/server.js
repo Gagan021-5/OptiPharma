@@ -32,6 +32,40 @@ import ScanHistory from "./models/ScanHistory.js";
 const PORT = process.env.PORT || 5000;
 const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/optipharma";
 const PYTHON_SERVICE_URL = process.env.PYTHON_SERVICE_URL || "http://localhost:8000";
+const SAFE_MONGO_URI = (() => {
+  try {
+    const parsed = new URL(MONGO_URI);
+    const protocol = parsed.protocol || "mongodb:";
+    const host = parsed.host || "unknown-host";
+    const database = parsed.pathname && parsed.pathname !== "/" ? parsed.pathname : "";
+
+    if (parsed.username) {
+      return `${protocol}//${parsed.username}:***@${host}${database}`;
+    }
+
+    return `${protocol}//${host}${database}`;
+  } catch {
+    return "invalid-or-unparseable-uri";
+  }
+})();
+
+function escapeRegex(value = "") {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function buildTruthLedgerMatch(medicine) {
+  if (!medicine) {
+    return null;
+  }
+
+  return {
+    brandName: medicine.brandName,
+    batchNumber: medicine.batchNumber,
+    expectedCompounds: medicine.expectedCompounds,
+    manufacturer: medicine.manufacturer,
+    expiryDate: medicine.expiryDate,
+  };
+}
 
 // ─────────────────────────────────────────────────────────────────
 // Express App Setup
@@ -70,7 +104,7 @@ const upload = multer({
 
 mongoose
   .connect(MONGO_URI)
-  .then(() => console.log("✓ Connected to MongoDB:", MONGO_URI))
+  .then(() => console.log("✓ Connected to MongoDB:", SAFE_MONGO_URI))
   .catch((err) => console.error("✗ MongoDB connection failed:", err.message));
 
 // ─────────────────────────────────────────────────────────────────
@@ -114,7 +148,9 @@ app.post("/api/scan", upload.single("image"), async (req, res) => {
     // ── MongoDB Lookup — The Truth Ledger ─────────────────────
     let expectedCompounds = null;
     let referenceLogo = "default_logo.png";
-    const batchHint = req.body.batch_number || null;
+    const batchHint = req.body.batch_number?.trim().toUpperCase() || null;
+    const brandHint = req.body.brandName?.trim() || req.body.brand_name?.trim() || null;
+    let matchedMedicine = null;
 
     if (batchHint) {
       console.log(`   Batch hint: ${batchHint}`);
@@ -124,6 +160,7 @@ app.post("/api/scan", upload.single("image"), async (req, res) => {
       });
 
       if (medicine) {
+        matchedMedicine = medicine;
         expectedCompounds = medicine.expectedCompounds;
         referenceLogo = medicine.referenceLogoFilename || "default_logo.png";
         console.log(`   ✓ Found in Truth Ledger: ${medicine.brandName}`);
@@ -140,6 +177,26 @@ app.post("/api/scan", upload.single("image"), async (req, res) => {
     // ── Forward to Python AI/CV Microservice ──────────────────
     console.log(`   → Forwarding to Python service at ${PYTHON_SERVICE_URL}...`);
 
+    // CHANGE 1:
+    // If batch lookup did not resolve a ledger record, fall back to the
+    // brand name supplied by the frontend payload.
+    if (!matchedMedicine && brandHint) {
+      console.log(`   Brand hint: ${brandHint}`);
+      matchedMedicine = await Medicine.findOne({
+        brandName: new RegExp(`^${escapeRegex(brandHint)}$`, "i"),
+        isActive: true,
+      }).sort({ updatedAt: -1 });
+
+      if (matchedMedicine) {
+        expectedCompounds = matchedMedicine.expectedCompounds;
+        referenceLogo = matchedMedicine.referenceLogoFilename || "default_logo.png";
+        console.log(`   Brand lookup resolved: ${matchedMedicine.brandName}`);
+        console.log(`   Expected: ${expectedCompounds.join(", ")}`);
+      } else {
+        console.log(`   Brand ${brandHint} not found in Truth Ledger`);
+      }
+    }
+
     const formData = new FormData();
     formData.append("image", req.file.buffer, {
       filename: req.file.originalname,
@@ -149,9 +206,15 @@ app.post("/api/scan", upload.single("image"), async (req, res) => {
     // Attach expected compounds from MongoDB (if found)
     if (expectedCompounds) {
       formData.append("expected_compounds", JSON.stringify(expectedCompounds));
+      formData.append("expected_chemicals", JSON.stringify(expectedCompounds));
     }
     if (batchHint) {
       formData.append("batch_number", batchHint);
+    } else if (matchedMedicine?.batchNumber) {
+      formData.append("batch_number", matchedMedicine.batchNumber);
+    }
+    if (brandHint || matchedMedicine?.brandName) {
+      formData.append("brand_name", matchedMedicine?.brandName || brandHint);
     }
     formData.append("reference_logo", referenceLogo);
 
@@ -167,6 +230,10 @@ app.post("/api/scan", upload.single("image"), async (req, res) => {
     );
 
     const report = pythonResponse.data;
+
+    if (matchedMedicine) {
+      report._truthLedgerMatch = buildTruthLedgerMatch(matchedMedicine);
+    }
 
     // ── Post-Processing: Lookup by extracted batch (if no hint) ──
     if (!expectedCompounds && report.extracted_text?.batch_number) {
@@ -316,6 +383,6 @@ app.listen(PORT, () => {
   console.log(` 🛡️  OptiPharma Gateway`);
   console.log(` 📡  Port: ${PORT}`);
   console.log(` 🐍  Python Service: ${PYTHON_SERVICE_URL}`);
-  console.log(` 🗄️   MongoDB: ${MONGO_URI}`);
+  console.log(` 🗄️   MongoDB: ${SAFE_MONGO_URI}`);
   console.log("═".repeat(50));
 });

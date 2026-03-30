@@ -60,7 +60,9 @@ async def health_check():
 @app.post("/api/analyze", response_model=ThreatReport)
 async def analyze_medicine(
     image: UploadFile = File(..., description="Medicine strip image"),
+    expected_chemicals: Optional[str] = Form(None, description="JSON array of expected Truth Ledger chemicals"),
     expected_compounds: Optional[str] = Form(None, description="JSON array of expected compounds from MongoDB"),
+    brand_name: Optional[str] = Form(None, description="Brand name resolved by the Node gateway"),
     batch_number: Optional[str] = Form(None, description="Known batch number"),
     reference_logo: Optional[str] = Form("default_logo.png", description="Reference logo filename"),
 ):
@@ -70,8 +72,8 @@ async def analyze_medicine(
     Receives a medicine strip image and runs the hybrid pipeline:
       Tier 1 (OpenCV SSIM) → Gate → Tier 2 (Gemini Vision)
     
-    The Node.js gateway attaches `expected_compounds` (from MongoDB)
-    so the pipeline can verify extracted compounds against the Truth Ledger.
+    The Node.js gateway attaches the Truth Ledger chemical list so Gemini can
+    verify OCR output against the official database record.
     """
     logger.info(f"━━━ Incoming scan request ━━━")
     logger.info(f"  File: {image.filename} ({image.content_type})")
@@ -90,20 +92,24 @@ async def analyze_medicine(
     if len(image_bytes) == 0:
         raise HTTPException(status_code=400, detail="Empty image file received.")
 
-    # Parse expected compounds from JSON string (sent by Node gateway)
+    # CHANGE 1:
+    # Accept the new `expected_chemicals` form field, but keep the old field
+    # name as a fallback so older gateway payloads still work.
+    expected_chemicals_payload = expected_chemicals or expected_compounds
     compounds_list = None
-    if expected_compounds:
+    if expected_chemicals_payload:
         try:
-            compounds_list = json.loads(expected_compounds)
-            logger.info(f"  Expected compounds: {compounds_list}")
+            compounds_list = json.loads(expected_chemicals_payload)
+            logger.info(f"  Expected chemicals from Truth Ledger: {compounds_list}")
         except json.JSONDecodeError:
-            logger.warning("  ⚠ Could not parse expected_compounds JSON")
+            logger.warning("  Could not parse expected_chemicals JSON")
 
     # Run the hybrid pipeline
     report = await run_pipeline(
         image_bytes=image_bytes,
         expected_compounds=compounds_list,
         batch_number_hint=batch_number,
+        brand_name_hint=brand_name.strip() if brand_name else None,
         reference_logo=reference_logo or "default_logo.png",
     )
 

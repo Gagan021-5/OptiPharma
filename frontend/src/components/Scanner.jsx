@@ -24,6 +24,7 @@ export default function Scanner({ onScanComplete, isScanning, setIsScanning }) {
   const fileInputRef = useRef(null);
   
   const [capturedImage, setCapturedImage] = useState(null);
+  const [brandName, setBrandName] = useState('PAN 40');
   const [batchNumber, setBatchNumber] = useState('');
   const [error, setError] = useState(null);
   const [useWebcam, setUseWebcam] = useState(true);
@@ -87,11 +88,28 @@ export default function Scanner({ onScanComplete, isScanning, setIsScanning }) {
     setError(null);
 
     try {
+      const normalizedBrandName = brandName.trim();
+      const normalizedBatchNumber = batchNumber.trim().toUpperCase();
+
+      // CHANGE 1:
+      // The Node gateway needs a Truth Ledger key to fetch expected chemicals.
+      // We allow either a brand name, a batch number, or both.
+      if (!normalizedBrandName && !normalizedBatchNumber) {
+        throw new Error('Enter a brand name or batch number so the Truth Ledger can verify compounds');
+      }
+
       const formData = new FormData();
       formData.append('image', dataURLtoFile(capturedImage));
+
+      // CHANGE 2:
+      // Always send the brand name so the backend can resolve the medicine
+      // even when the operator does not know the batch number up front.
+      if (normalizedBrandName) {
+        formData.append('brandName', normalizedBrandName);
+      }
       
-      if (batchNumber.trim()) {
-        formData.append('batch_number', batchNumber.trim().toUpperCase());
+      if (normalizedBatchNumber) {
+        formData.append('batch_number', normalizedBatchNumber);
       }
 
       const response = await fetch(API_URL, {
@@ -270,6 +288,31 @@ export default function Scanner({ onScanComplete, isScanning, setIsScanning }) {
           transition={{ delay: 0.2 }}
           className="space-y-4"
         >
+          {/* Brand Name Input */}
+          <div className="glass-card p-4">
+            <label className="block text-xs font-mono text-pharma-slate-500 uppercase tracking-wider mb-2">
+              Brand Name
+            </label>
+            <select
+              value={brandName}
+              onChange={(e) => setBrandName(e.target.value)}
+              disabled={isScanning}
+              className="w-full px-3 py-2.5 rounded-lg bg-pharma-slate-800 border border-white/10
+                         text-white text-sm font-mono
+                         focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/20
+                         transition-all disabled:opacity-50"
+            >
+              <option value="PAN 40">PAN 40</option>
+              <option value="Dolo 650">Dolo 650</option>
+              <option value="Augmentin 625 Duo">Augmentin 625 Duo</option>
+              <option value="Allegra 120">Allegra 120</option>
+              <option value="Glycomet-GP 1">Glycomet-GP 1</option>
+            </select>
+            <p className="text-[10px] text-pharma-slate-600 mt-1.5">
+              Sent with the scan so the Node gateway can fetch the Truth Ledger record
+            </p>
+          </div>
+
           {/* Batch Number Input */}
           <div className="glass-card p-4">
             <label className="block text-xs font-mono text-pharma-slate-500 uppercase tracking-wider mb-2">

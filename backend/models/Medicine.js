@@ -70,6 +70,7 @@ const MedicineSchema = new mongoose.Schema(
     },
   },
   {
+    collection: "medicine",
     timestamps: true, // adds createdAt, updatedAt automatically
   }
 );

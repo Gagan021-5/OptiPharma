@@ -293,6 +293,7 @@ async def run_pipeline(
     image_bytes: bytes,
     expected_compounds: Optional[List[str]] = None,
     batch_number_hint: Optional[str] = None,
+    brand_name_hint: Optional[str] = None,
     reference_logo: str = "default_logo.png",
 ) -> ThreatReport:
     """
@@ -310,6 +311,7 @@ async def run_pipeline(
         image_bytes:        Raw image file bytes from the upload.
         expected_compounds: Expected chemical compounds from MongoDB Truth Ledger.
         batch_number_hint:  Known batch number (if gateway pre-identified it).
+        brand_name_hint:    Known brand name (if gateway pre-identified it).
         reference_logo:     Filename of the reference logo for SSIM comparison.
     
     Returns:
@@ -396,10 +398,18 @@ async def run_pipeline(
     
     if expected_compounds:
         # We have expected compounds from MongoDB — verify against extraction
+        verification_batch = batch_number_hint or extracted_text.batch_number or "UNKNOWN"
+        verification_brand = brand_name_hint or extracted_text.brand_name or "UNKNOWN"
+
+        # CHANGE:
+        # Pass the Truth Ledger identity and raw OCR text into Gemini so the LLM
+        # can compare the extracted evidence against the official record.
         verification = await gemini_client.verify_compounds(
             extracted_compounds=extracted_compounds,
             expected_compounds=expected_compounds,
-            batch_number=extracted_text.batch_number,
+            batch_number=verification_batch,
+            brand_name_hint=verification_brand,
+            raw_text=extracted_text.raw_text,
         )
         
         compound_result = CompoundVerification(

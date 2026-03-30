@@ -47,16 +47,23 @@ RESPOND ONLY with this exact JSON structure (no markdown, no explanation):
 
 VERIFICATION_PROMPT_TEMPLATE = """You are a pharmaceutical verification AI. Compare the following:
 
-EXTRACTED compounds from the medicine strip:
-{extracted}
+OFFICIAL Truth Ledger record:
+- Brand Name: {brand}
+- Batch Number: {batch}
+- Expected chemicals: {expected}
 
-EXPECTED compounds from the official database for Batch {batch}:
-{expected}
+OCR extraction from the medicine strip:
+- Extracted compounds: {extracted}
+- Raw OCR text: {raw_text}
 
-TASK: Determine if the extracted compounds match the expected compounds.
+Use the Truth Ledger list as the source of truth.
+
+TASK: Determine if the OCR evidence supports the official chemical list.
 - Minor spelling variations are acceptable (e.g., "Paracetamol" vs "paracetamol").
+- Minor formatting differences are acceptable (e.g., "500 mg" vs "500mg").
+- Salt-form wording can vary when the core active ingredient clearly matches.
 - The order does not matter.
-- ALL expected compounds must be present in the extracted list.
+- ALL expected compounds must be present in either the extracted compounds list or clearly visible in the raw OCR text.
 
 RESPOND ONLY with this exact JSON (no markdown):
 {{
@@ -151,6 +158,8 @@ class GeminiVisionClient:
         extracted_compounds: List[str],
         expected_compounds: List[str],
         batch_number: str,
+        brand_name_hint: Optional[str] = None,
+        raw_text: str = "",
     ) -> Dict[str, Any]:
         """
         Ask Gemini to semantically compare extracted vs expected compounds.
@@ -160,6 +169,8 @@ class GeminiVisionClient:
             extracted_compounds: List of compounds OCR'd from the strip.
             expected_compounds:  List of expected compounds from MongoDB.
             batch_number:        The batch number for context.
+            brand_name_hint:     Brand name resolved by Node / OCR.
+            raw_text:            Full OCR text for extra verification context.
             
         Returns:
             Dict with keys: match, match_percentage, mismatches, notes
@@ -169,6 +180,8 @@ class GeminiVisionClient:
                 extracted=json.dumps(extracted_compounds),
                 expected=json.dumps(expected_compounds),
                 batch=batch_number,
+                brand=brand_name_hint or "UNKNOWN",
+                raw_text=json.dumps(raw_text),
             )
 
             logger.info(f"→ Verifying compounds for batch {batch_number}...")
