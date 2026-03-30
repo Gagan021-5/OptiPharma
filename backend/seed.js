@@ -1,11 +1,12 @@
 import "dotenv/config";
 import mongoose from "mongoose";
+import { pathToFileURL } from "url";
 import Medicine from "./models/Medicine.js";
 
 const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/optipharma";
 
 // The "National Truth Ledger" Mock Data
-const DRUG_DATABASE = [
+export const DRUG_DATABASE = [
   {
     batchNumber: "UNKNOWN", // Set to unknown to simulate a damaged/unreadable batch number on the foil
     brandName: "PAN 40",
@@ -62,10 +63,19 @@ const DRUG_DATABASE = [
     expiryDate: new Date("2027-12-31"),
     referenceLogoFilename: "default_logo.png",
     category: "antibiotic",
+  },
+  {
+    batchNumber: "251121726", 
+    brandName: "Myorelax 4",
+    manufacturer: "Chemo Biological",
+    expectedCompounds: ["Thiocolchicoside 4 mg"], 
+    expiryDate: new Date("2027-11-30"), 
+    referenceLogoFilename: "default_logo.png",
+    category: "muscle relaxant",
   }
 ];
 
-async function seed() {
+export async function seed() {
   try {
     console.log("Connecting to MongoDB...");
     await mongoose.connect(MONGO_URI);
@@ -90,4 +100,10 @@ async function seed() {
   }
 }
 
-seed();
+const isDirectRun = process.argv[1]
+  ? import.meta.url === pathToFileURL(process.argv[1]).href
+  : false;
+
+if (isDirectRun) {
+  seed();
+}

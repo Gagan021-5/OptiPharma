@@ -3,15 +3,10 @@ import { AnimatePresence, motion } from 'framer-motion';
 import Webcam from 'react-webcam';
 import ScanOverlay from './ScanOverlay';
 
-const API_URL = '/api/scan';
-
-const BRAND_OPTIONS = [
-  'PAN 40',
-  'Dolo 650',
-  'Augmentin 625 Duo',
-  'Allegra 120',
-  'Glycomet-GP 1',
-];
+const API_URL = '/api/analyze';
+const AWAITING_SCAN_COPY = 'Awaiting Scan...';
+const EXTRACTING_COPY = 'Extracting via AI...';
+const NOT_DETECTED_COPY = 'Not detected';
 
 const PIPELINE_STAGES = [
   {
@@ -57,8 +52,8 @@ export default function Scanner({ onScanComplete, isScanning, setIsScanning }) {
   const fileInputRef = useRef(null);
 
   const [capturedImage, setCapturedImage] = useState(null);
-  const [brandName, setBrandName] = useState('PAN 40');
-  const [batchNumber, setBatchNumber] = useState('');
+  const [detectedBrand, setDetectedBrand] = useState(AWAITING_SCAN_COPY);
+  const [detectedBatch, setDetectedBatch] = useState(AWAITING_SCAN_COPY);
   const [error, setError] = useState(null);
   const [useWebcam, setUseWebcam] = useState(true);
   const [webcamReady, setWebcamReady] = useState(false);
@@ -75,11 +70,30 @@ export default function Scanner({ onScanComplete, isScanning, setIsScanning }) {
     }
   };
 
+  const resetDetectedFields = () => {
+    setDetectedBrand(AWAITING_SCAN_COPY);
+    setDetectedBatch(AWAITING_SCAN_COPY);
+  };
+
+  const resolveDetectedValue = (value) => {
+    if (typeof value !== 'string') {
+      return '';
+    }
+
+    const normalizedValue = value.trim();
+    if (!normalizedValue || normalizedValue.toUpperCase() === 'UNKNOWN') {
+      return '';
+    }
+
+    return normalizedValue;
+  };
+
   const switchMode = (nextUseWebcam) => {
     setUseWebcam(nextUseWebcam);
     setCapturedImage(null);
     setError(null);
     setWebcamReady(false);
+    resetDetectedFields();
     resetFileInput();
   };
 
@@ -98,6 +112,7 @@ export default function Scanner({ onScanComplete, isScanning, setIsScanning }) {
     }
 
     setCapturedImage(imageSrc);
+    resetDetectedFields();
     setError(null);
   }, []);
 
@@ -115,6 +130,7 @@ export default function Scanner({ onScanComplete, isScanning, setIsScanning }) {
     reader.onload = (loadEvent) => {
       setUseWebcam(false);
       setCapturedImage(loadEvent.target?.result);
+      resetDetectedFields();
       setError(null);
     };
 
@@ -142,25 +158,12 @@ export default function Scanner({ onScanComplete, isScanning, setIsScanning }) {
 
     setIsScanning(true);
     setError(null);
+    setDetectedBrand(EXTRACTING_COPY);
+    setDetectedBatch(EXTRACTING_COPY);
 
     try {
-      const normalizedBrandName = brandName.trim();
-      const normalizedBatchNumber = batchNumber.trim().toUpperCase();
-
-      if (!normalizedBrandName && !normalizedBatchNumber) {
-        throw new Error('Enter a brand name or batch number so the truth ledger can verify compounds.');
-      }
-
       const formData = new FormData();
       formData.append('image', dataURLtoFile(capturedImage));
-
-      if (normalizedBrandName) {
-        formData.append('brandName', normalizedBrandName);
-      }
-
-      if (normalizedBatchNumber) {
-        formData.append('batch_number', normalizedBatchNumber);
-      }
 
       const response = await fetch(API_URL, {
         method: 'POST',
@@ -173,9 +176,15 @@ export default function Scanner({ onScanComplete, isScanning, setIsScanning }) {
       }
 
       const report = await response.json();
+      const resolvedBrand = resolveDetectedValue(report.brandName) || resolveDetectedValue(report.extracted_text?.brand_name) || NOT_DETECTED_COPY;
+      const resolvedBatch = resolveDetectedValue(report.batchNumber) || resolveDetectedValue(report.extracted_text?.batch_number) || NOT_DETECTED_COPY;
+
+      setDetectedBrand(resolvedBrand);
+      setDetectedBatch(resolvedBatch);
       onScanComplete(report);
     } catch (err) {
       console.error('Scan failed:', err);
+      resetDetectedFields();
       setError(err.message || 'Failed to connect to the OptiPharma backend.');
       setIsScanning(false);
     }
@@ -184,6 +193,7 @@ export default function Scanner({ onScanComplete, isScanning, setIsScanning }) {
   const handleRetake = () => {
     setCapturedImage(null);
     setError(null);
+    resetDetectedFields();
     resetFileInput();
   };
 
@@ -204,8 +214,8 @@ export default function Scanner({ onScanComplete, isScanning, setIsScanning }) {
               Operational workspace for medicine strip verification.
             </h2>
             <p className="mt-4 max-w-2xl text-sm leading-6 text-pharma-slate-400 sm:text-base">
-              Capture or upload a strip image, attach product context, and run the full OptiPharma
-              verification pipeline from a single operator console.
+              Capture or upload a strip image and let the AI extract product context before the
+              truth ledger verifies the medicine automatically.
             </p>
           </div>
 
@@ -216,9 +226,9 @@ export default function Scanner({ onScanComplete, isScanning, setIsScanning }) {
               <p className="mt-2 text-sm text-pharma-slate-400">Supports live capture and stored inspection images.</p>
             </div>
             <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-4">
-              <p className="text-[10px] font-mono uppercase tracking-[0.24em] text-pharma-slate-500">Lookup context</p>
-              <p className="mt-3 text-xl font-semibold text-white">Brand or batch</p>
-              <p className="mt-2 text-sm text-pharma-slate-400">Supports brand-led and batch-led verification workflows.</p>
+              <p className="text-[10px] font-mono uppercase tracking-[0.24em] text-pharma-slate-500">AI extraction</p>
+              <p className="mt-3 text-xl font-semibold text-white">Brand + batch</p>
+              <p className="mt-2 text-sm text-pharma-slate-400">Detects medicine identity directly from the strip image.</p>
             </div>
             <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-4">
               <p className="text-[10px] font-mono uppercase tracking-[0.24em] text-pharma-slate-500">Pipeline coverage</p>
@@ -392,6 +402,34 @@ export default function Scanner({ onScanComplete, isScanning, setIsScanning }) {
               <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-4">
                 <p className="text-[10px] font-mono uppercase tracking-[0.24em] text-pharma-slate-500">Quick actions</p>
                 <div className="mt-3 flex flex-col gap-3">
+                  <div className="grid gap-3">
+                    <div>
+                      <label className="mb-2 block text-xs font-mono uppercase tracking-[0.22em] text-pharma-slate-500">
+                        Detected Brand
+                      </label>
+                      <input
+                        type="text"
+                        value={isScanning ? EXTRACTING_COPY : detectedBrand}
+                        readOnly
+                        disabled
+                        className="w-full rounded-2xl border border-white/10 bg-pharma-slate-800 px-4 py-3 text-sm text-white outline-none transition disabled:opacity-60"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="mb-2 block text-xs font-mono uppercase tracking-[0.22em] text-pharma-slate-500">
+                        Detected Batch
+                      </label>
+                      <input
+                        type="text"
+                        value={isScanning ? EXTRACTING_COPY : detectedBatch}
+                        readOnly
+                        disabled
+                        className="w-full rounded-2xl border border-white/10 bg-pharma-slate-800 px-4 py-3 text-sm text-white outline-none transition disabled:opacity-60"
+                      />
+                    </div>
+                  </div>
+
                   {!capturedImage && useWebcam && (
                     <button
                       type="button"
@@ -473,52 +511,19 @@ export default function Scanner({ onScanComplete, isScanning, setIsScanning }) {
           <section className="glass-card p-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <p className="text-[10px] font-mono uppercase tracking-[0.24em] text-pharma-slate-500">Verification inputs</p>
-                <h3 className="mt-1 text-lg font-semibold text-white">Verification context</h3>
+                <p className="text-[10px] font-mono uppercase tracking-[0.24em] text-pharma-slate-500">AI-first workflow</p>
+                <h3 className="mt-1 text-lg font-semibold text-white">Zero-click verification</h3>
               </div>
               <span className="inline-flex w-fit rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-[10px] font-mono uppercase tracking-[0.22em] text-pharma-slate-500">
-                Traceable inputs
+                Image only
               </span>
             </div>
 
-            <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
-              <div>
-                <label className="mb-2 block text-xs font-mono uppercase tracking-[0.22em] text-pharma-slate-500">
-                  Brand name
-                </label>
-                <select
-                  value={brandName}
-                  onChange={(event) => setBrandName(event.target.value)}
-                  disabled={isScanning}
-                  className="w-full rounded-2xl border border-white/10 bg-pharma-slate-800 px-4 py-3 text-sm text-white outline-none transition focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/15 disabled:opacity-60"
-                >
-                  {BRAND_OPTIONS.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
-                <p className="mt-2 text-xs text-pharma-slate-500">
-                  Sent with the scan so the backend can resolve the truth ledger record.
-                </p>
-              </div>
-
-              <div>
-                <label className="mb-2 block text-xs font-mono uppercase tracking-[0.22em] text-pharma-slate-500">
-                  Batch number
-                </label>
-                <input
-                  type="text"
-                  value={batchNumber}
-                  onChange={(event) => setBatchNumber(event.target.value)}
-                  placeholder="e.g. BATCH-PCM-2026-001"
-                  disabled={isScanning}
-                  className="w-full rounded-2xl border border-white/10 bg-pharma-slate-800 px-4 py-3 text-sm text-white outline-none transition placeholder:text-pharma-slate-600 focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/15 disabled:opacity-60"
-                />
-                <p className="mt-2 text-xs text-pharma-slate-500">
-                  Optional, but useful when the operator already has pack trace data.
-                </p>
-              </div>
+            <div className="mt-4 rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-4">
+              <p className="text-sm leading-6 text-pharma-slate-400">
+                The scanner now submits only the strip image. The backend extracts brand, batch, and
+                compounds through Gemini OCR, then cross-checks the result against the MongoDB Truth Ledger.
+              </p>
             </div>
           </section>
 

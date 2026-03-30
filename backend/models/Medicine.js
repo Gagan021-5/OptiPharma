@@ -59,7 +59,7 @@ const MedicineSchema = new mongoose.Schema(
     // Drug category for classification
     category: {
       type: String,
-      enum: ["analgesic", "antibiotic", "antiviral", "cardiovascular", "other"],
+      enum: ["analgesic", "antibiotic", "antiviral", "cardiovascular", "muscle relaxant", "imported_1mg", "other"],
       default: "other",
     },
 

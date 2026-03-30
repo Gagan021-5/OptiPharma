@@ -1,18 +1,3 @@
-/**
- * ╔══════════════════════════════════════════════════════════════════════╗
- * ║  OptiPharma — Node.js Express Gateway Server                        ║
- * ║                                                                     ║
- * ║  The intelligent middleware between React frontend and Python       ║
- * ║  AI/CV microservice. Responsibilities:                              ║
- * ║                                                                     ║
- * ║  1. Accept image uploads from the frontend (multer)                 ║
- * ║  2. Look up expected compounds from MongoDB Truth Ledger            ║
- * ║  3. Forward image + compound data to Python FastAPI                 ║
- * ║  4. Log every scan result to ScanHistory                            ║
- * ║  5. Return structured threat report to frontend                     ║
- * ╚══════════════════════════════════════════════════════════════════════╝
- */
-
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
@@ -21,17 +6,14 @@ import axios from "axios";
 import FormData from "form-data";
 import mongoose from "mongoose";
 
-// Models
 import Medicine from "./models/Medicine.js";
 import ScanHistory from "./models/ScanHistory.js";
-
-// ─────────────────────────────────────────────────────────────────
-// Configuration
-// ─────────────────────────────────────────────────────────────────
+import { DRUG_DATABASE } from "./seed.js";
 
 const PORT = process.env.PORT || 5000;
 const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/optipharma";
 const PYTHON_SERVICE_URL = process.env.PYTHON_SERVICE_URL || "http://localhost:8000";
+
 const SAFE_MONGO_URI = (() => {
   try {
     const parsed = new URL(MONGO_URI);
@@ -67,6 +49,143 @@ function buildTruthLedgerMatch(medicine) {
   };
 }
 
+function normalizeDetectedValue(value, { uppercase = false } = {}) {
+  if (typeof value !== "string") {
+    return "";
+  }
+
+  const normalizedValue = value.trim();
+  if (!normalizedValue || normalizedValue.toUpperCase() === "UNKNOWN") {
+    return "";
+  }
+
+  return uppercase ? normalizedValue.toUpperCase() : normalizedValue;
+}
+
+async function callPythonAnalyze({
+  file,
+  expectedCompounds = null,
+  brandName = null,
+  batchNumber = null,
+  referenceLogo = "default_logo.png",
+}) {
+  const formData = new FormData();
+  formData.append("image", file.buffer, {
+    filename: file.originalname,
+    contentType: file.mimetype,
+  });
+
+  if (expectedCompounds?.length) {
+    const compoundsJson = JSON.stringify(expectedCompounds);
+    formData.append("expected_compounds", compoundsJson);
+    formData.append("expected_chemicals", compoundsJson);
+  }
+
+  if (brandName) {
+    formData.append("brand_name", brandName);
+  }
+
+  if (batchNumber) {
+    formData.append("batch_number", batchNumber);
+  }
+
+  formData.append("reference_logo", referenceLogo || "default_logo.png");
+
+  const pythonResponse = await axios.post(
+    `${PYTHON_SERVICE_URL}/api/analyze`,
+    formData,
+    {
+      headers: formData.getHeaders(),
+      timeout: 60000,
+      maxContentLength: 50 * 1024 * 1024,
+    }
+  );
+
+  return pythonResponse.data;
+}
+
+function buildUnifiedReport(report, { matchedMedicine = null, brandName = "", batchNumber = "", processingTimeMs = 0 }) {
+  return {
+    ...report,
+    brandName: brandName || matchedMedicine?.brandName || "",
+    batchNumber: batchNumber || matchedMedicine?.batchNumber || "UNKNOWN",
+    processing_time_ms: processingTimeMs || report.processing_time_ms || 0,
+    _truthLedgerMatch: matchedMedicine ? buildTruthLedgerMatch(matchedMedicine) : null,
+  };
+}
+
+function buildUnrecognizedBrandReport(report, { brandName = "", batchNumber = "", processingTimeMs = 0 }) {
+  return {
+    ...report,
+    verdict: report.rejection_reason ? report.verdict : "COUNTERFEIT",
+    rejection_reason: report.rejection_reason || "Unrecognized Brand",
+    brandName,
+    batchNumber: batchNumber || "UNKNOWN",
+    processing_time_ms: processingTimeMs || report.processing_time_ms || 0,
+    compound_verification: {
+      extracted_compounds: report.compound_verification?.extracted_compounds || [],
+      expected_compounds: [],
+      match: false,
+      match_percentage: 0,
+    },
+    _truthLedgerMatch: null,
+  };
+}
+
+async function logScanHistoryEntry({ report, req, processingTimeMs }) {
+  try {
+    await ScanHistory.create({
+      batchNumber: report.batchNumber || report.extracted_text?.batch_number || "UNKNOWN",
+      brandName: report.brandName || report.extracted_text?.brand_name || "",
+      verdict: report.verdict,
+      ssimScore: report.ssim?.score || 0,
+      confidence: report.confidence || 0,
+      extractedText: report.extracted_text?.raw_text || "",
+      compoundMatch: report.compound_verification?.match || false,
+      compoundMatchPercentage: report.compound_verification?.match_percentage || 0,
+      rejectionReason: report.rejection_reason || null,
+      processingTimeMs,
+      ipAddress: req.ip || req.connection?.remoteAddress || "",
+    });
+    console.log("  Scan logged to history");
+  } catch (logErr) {
+    console.error("  Failed to log scan:", logErr.message);
+  }
+}
+
+async function syncTruthLedgerSeedData() {
+  console.log("Syncing Truth Ledger seed data with MongoDB...");
+
+  let insertedCount = 0;
+  let updatedCount = 0;
+
+  for (const medicineRecord of DRUG_DATABASE) {
+    const existingMedicine = await Medicine.findOne({
+      batchNumber: medicineRecord.batchNumber,
+    }).lean();
+
+    const payload = {
+      ...medicineRecord,
+      isActive: true,
+    };
+
+    if (existingMedicine) {
+      await Medicine.updateOne(
+        { batchNumber: medicineRecord.batchNumber },
+        { $set: payload }
+      );
+      updatedCount += 1;
+    } else {
+      await Medicine.create(payload);
+      insertedCount += 1;
+    }
+  }
+
+  console.log(
+    `Truth Ledger sync complete. Inserted ${insertedCount} new medicines, updated ${updatedCount} existing medicines.`
+  );
+}
+
 const app = express();
 
 app.use(
@@ -81,9 +200,10 @@ app.use(express.json());
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB max
+  limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const allowed = ["image/jpeg", "image/png", "image/webp", "image/bmp"];
+
     if (allowed.includes(file.mimetype)) {
       cb(null, true);
     } else {
@@ -91,13 +211,6 @@ const upload = multer({
     }
   },
 });
-
-
-mongoose
-  .connect(MONGO_URI)
-  .then(() => console.log("✓ Connected to MongoDB:", SAFE_MONGO_URI))
-  .catch((err) => console.error("✗ MongoDB connection failed:", err.message));
-
 
 app.get("/health", (req, res) => {
   res.json({
@@ -108,187 +221,120 @@ app.get("/health", (req, res) => {
   });
 });
 
-
-app.post("/api/scan", upload.single("image"), async (req, res) => {
+const analyzeScanRequest = async (req, res) => {
   const startTime = Date.now();
 
   try {
-    // ── Validate Upload ───────────────────────────────────────
     if (!req.file) {
       return res.status(400).json({ error: "No image file provided" });
     }
 
-    console.log(`\n${"━".repeat(50)}`);
-    console.log(`📸 Scan request received`);
-    console.log(`   File: ${req.file.originalname} (${(req.file.size / 1024).toFixed(1)} KB)`);
+    console.log(`\n${"-".repeat(50)}`);
+    console.log("Scan request received");
+    console.log(`  File: ${req.file.originalname} (${(req.file.size / 1024).toFixed(1)} KB)`);
 
-    // ── MongoDB Lookup — The Truth Ledger ─────────────────────
-    let expectedCompounds = null;
-    let referenceLogo = "default_logo.png";
-    const batchHint = req.body.batch_number?.trim().toUpperCase() || null;
-    const brandHint = req.body.brandName?.trim() || req.body.brand_name?.trim() || null;
-    let matchedMedicine = null;
-
-    if (batchHint) {
-      console.log(`   Batch hint: ${batchHint}`);
-      const medicine = await Medicine.findOne({
-        batchNumber: batchHint.toUpperCase(),
-        isActive: true,
-      });
-
-      if (medicine) {
-        matchedMedicine = medicine;
-        expectedCompounds = medicine.expectedCompounds;
-        referenceLogo = medicine.referenceLogoFilename || "default_logo.png";
-        console.log(`   ✓ Found in Truth Ledger: ${medicine.brandName}`);
-        console.log(`   ✓ Expected: ${expectedCompounds.join(", ")}`);
-      } else {
-        console.log(`   ⚠ Batch ${batchHint} not found in Truth Ledger`);
-      }
-    } else {
-      // No batch hint — try to find ANY matching medicine
-      // The Python service will extract the batch via Gemini OCR
-      console.log(`   ℹ No batch hint — Python service will extract via OCR`);
-    }
-
-    // ── Forward to Python AI/CV Microservice ──────────────────
-    console.log(`   → Forwarding to Python service at ${PYTHON_SERVICE_URL}...`);
-
-    // CHANGE 1:
-    // If batch lookup did not resolve a ledger record, fall back to the
-    // brand name supplied by the frontend payload.
-    if (!matchedMedicine && brandHint) {
-      console.log(`   Brand hint: ${brandHint}`);
-      matchedMedicine = await Medicine.findOne({
-        brandName: new RegExp(`^${escapeRegex(brandHint)}$`, "i"),
-        isActive: true,
-      }).sort({ updatedAt: -1 });
-
-      if (matchedMedicine) {
-        expectedCompounds = matchedMedicine.expectedCompounds;
-        referenceLogo = matchedMedicine.referenceLogoFilename || "default_logo.png";
-        console.log(`   Brand lookup resolved: ${matchedMedicine.brandName}`);
-        console.log(`   Expected: ${expectedCompounds.join(", ")}`);
-      } else {
-        console.log(`   Brand ${brandHint} not found in Truth Ledger`);
-      }
-    }
-
-    const formData = new FormData();
-    formData.append("image", req.file.buffer, {
-      filename: req.file.originalname,
-      contentType: req.file.mimetype,
+    console.log(`  Discovery pass -> Python service at ${PYTHON_SERVICE_URL}`);
+    const discoveryReport = await callPythonAnalyze({
+      file: req.file,
+      referenceLogo: "default_logo.png",
     });
 
-    // Attach expected compounds from MongoDB (if found)
-    if (expectedCompounds) {
-      formData.append("expected_compounds", JSON.stringify(expectedCompounds));
-      formData.append("expected_chemicals", JSON.stringify(expectedCompounds));
-    }
-    if (batchHint) {
-      formData.append("batch_number", batchHint);
-    } else if (matchedMedicine?.batchNumber) {
-      formData.append("batch_number", matchedMedicine.batchNumber);
-    }
-    if (brandHint || matchedMedicine?.brandName) {
-      formData.append("brand_name", matchedMedicine?.brandName || brandHint);
-    }
-    formData.append("reference_logo", referenceLogo);
+    const extractedBrandName = normalizeDetectedValue(discoveryReport.extracted_text?.brand_name);
+    const extractedBatchNumber = normalizeDetectedValue(discoveryReport.extracted_text?.batch_number, {
+      uppercase: true,
+    });
 
-    // Call the Python service
-    const pythonResponse = await axios.post(
-      `${PYTHON_SERVICE_URL}/api/analyze`,
-      formData,
-      {
-        headers: formData.getHeaders(),
-        timeout: 60000, // 60s timeout for Gemini API calls
-        maxContentLength: 50 * 1024 * 1024,
-      }
-    );
+    console.log(`  AI detected brand: ${extractedBrandName || "UNKNOWN"}`);
+    console.log(`  AI detected batch: ${extractedBatchNumber || "UNKNOWN"}`);
 
-    const report = pythonResponse.data;
-
-    if (matchedMedicine) {
-      report._truthLedgerMatch = buildTruthLedgerMatch(matchedMedicine);
-    }
-
-    // ── Post-Processing: Lookup by extracted batch (if no hint) ──
-    if (!expectedCompounds && report.extracted_text?.batch_number) {
-      const extractedBatch = report.extracted_text.batch_number;
-      console.log(`   → OCR extracted batch: ${extractedBatch}`);
-
-      if (extractedBatch !== "UNKNOWN") {
-        const medicine = await Medicine.findOne({
-          batchNumber: extractedBatch.toUpperCase(),
+    const matchedMedicine = extractedBrandName
+      ? await Medicine.findOne({
+          brandName: new RegExp(`^${escapeRegex(extractedBrandName)}$`, "i"),
           isActive: true,
-        });
+        }).sort({ updatedAt: -1 })
+      : null;
 
-        if (medicine) {
-          console.log(`   ✓ Post-OCR lookup found: ${medicine.brandName}`);
-          // Note: In production, we'd re-run compound verification here.
-          // For hackathon, we attach the data for frontend display.
-          report._truthLedgerMatch = {
-            brandName: medicine.brandName,
-            expectedCompounds: medicine.expectedCompounds,
-            manufacturer: medicine.manufacturer,
-            expiryDate: medicine.expiryDate,
-          };
-        }
-      }
-    }
-
-    // ── Log to Scan History ───────────────────────────────────
-    try {
-      await ScanHistory.create({
-        batchNumber: report.extracted_text?.batch_number || batchHint || "UNKNOWN",
-        brandName: report.extracted_text?.brand_name || "",
-        verdict: report.verdict,
-        ssimScore: report.ssim?.score || 0,
-        confidence: report.confidence || 0,
-        extractedText: report.extracted_text?.raw_text || "",
-        compoundMatch: report.compound_verification?.match || false,
-        compoundMatchPercentage: report.compound_verification?.match_percentage || 0,
-        rejectionReason: report.rejection_reason || null,
+    if (!matchedMedicine) {
+      const unresolvedReport = buildUnrecognizedBrandReport(discoveryReport, {
+        brandName: extractedBrandName,
+        batchNumber: extractedBatchNumber,
         processingTimeMs: Date.now() - startTime,
-        ipAddress: req.ip || req.connection?.remoteAddress || "",
       });
-      console.log("   ✓ Scan logged to history");
-    } catch (logErr) {
-      console.error("   ⚠ Failed to log scan:", logErr.message);
+
+      console.log(`  Truth Ledger match: none for ${extractedBrandName || "UNKNOWN"}`);
+      console.log(`  Verdict: ${unresolvedReport.verdict} | Confidence: ${unresolvedReport.confidence}%`);
+      console.log(`  Total gateway time: ${unresolvedReport.processing_time_ms}ms`);
+      console.log("-".repeat(50));
+
+      await logScanHistoryEntry({
+        report: unresolvedReport,
+        req,
+        processingTimeMs: unresolvedReport.processing_time_ms,
+      });
+
+      return res.json(unresolvedReport);
     }
 
-    // ── Return Report ─────────────────────────────────────────
-    const totalTime = Date.now() - startTime;
-    console.log(`   ✓ Verdict: ${report.verdict} | Confidence: ${report.confidence}%`);
-    console.log(`   ✓ Total gateway time: ${totalTime}ms`);
-    console.log("━".repeat(50));
+    console.log(`  Truth Ledger match: ${matchedMedicine.brandName}`);
+    console.log(`  Expected compounds: ${matchedMedicine.expectedCompounds.join(", ")}`);
+    console.log("  Verification pass -> Python service with Truth Ledger context");
 
-    return res.json(report);
+    const verificationReport = await callPythonAnalyze({
+      file: req.file,
+      expectedCompounds: matchedMedicine.expectedCompounds,
+      brandName: matchedMedicine.brandName,
+      batchNumber: extractedBatchNumber || matchedMedicine.batchNumber,
+      referenceLogo: matchedMedicine.referenceLogoFilename || "default_logo.png",
+    });
+
+    const unifiedReport = buildUnifiedReport(verificationReport, {
+      matchedMedicine,
+      brandName: matchedMedicine.brandName,
+      batchNumber:
+        normalizeDetectedValue(verificationReport.extracted_text?.batch_number, {
+          uppercase: true,
+        }) ||
+        extractedBatchNumber ||
+        matchedMedicine.batchNumber,
+      processingTimeMs: Date.now() - startTime,
+    });
+
+    console.log(`  Verdict: ${unifiedReport.verdict} | Confidence: ${unifiedReport.confidence}%`);
+    console.log(`  Total gateway time: ${unifiedReport.processing_time_ms}ms`);
+    console.log("-".repeat(50));
+
+    await logScanHistoryEntry({
+      report: unifiedReport,
+      req,
+      processingTimeMs: unifiedReport.processing_time_ms,
+    });
+
+    return res.json(unifiedReport);
   } catch (err) {
     const totalTime = Date.now() - startTime;
-    console.error(`   ✗ Error after ${totalTime}ms:`, err.message);
+    console.error(`  Error after ${totalTime}ms:`, err.message);
 
-    // Differentiate between Python service errors and local errors
     if (err.response) {
       return res.status(err.response.status).json({
         error: "AI service error",
         details: err.response.data,
       });
     }
+
     if (err.code === "ECONNREFUSED") {
       return res.status(503).json({
         error: "AI/CV microservice is unavailable",
         details: `Cannot connect to ${PYTHON_SERVICE_URL}. Is the Python service running?`,
       });
     }
+
     return res.status(500).json({ error: "Gateway error", details: err.message });
   }
-});
+};
 
-/**
- * GET /api/history — Scan History for Analytics Dashboard
- * Returns the most recent scans, with optional filters.
- */
+app.post("/api/scan", upload.single("image"), analyzeScanRequest);
+app.post("/api/analyze", upload.single("image"), analyzeScanRequest);
+
 app.get("/api/history", async (req, res) => {
   try {
     const { limit = 50, verdict, batch } = req.query;
@@ -311,9 +357,6 @@ app.get("/api/history", async (req, res) => {
   }
 });
 
-/**
- * GET /api/medicines — List all medicines in the Truth Ledger
- */
 app.get("/api/medicines", async (req, res) => {
   try {
     const medicines = await Medicine.find({ isActive: true })
@@ -326,39 +369,56 @@ app.get("/api/medicines", async (req, res) => {
   }
 });
 
-/**
- * Root endpoint
- */
+app.get("/api/brands", async (req, res) => {
+  try {
+    const brands = await Medicine.distinct("brandName", { isActive: true });
+    const sortedBrands = brands
+      .filter(Boolean)
+      .sort((left, right) => left.localeCompare(right, undefined, { numeric: true, sensitivity: "base" }));
+
+    res.json(sortedBrands);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch brands", details: err.message });
+  }
+});
+
 app.get("/", (req, res) => {
   res.json({
     service: "OptiPharma Gateway",
     version: "1.0.0",
     endpoints: {
       "POST /api/scan": "Upload medicine image for verification",
+      "POST /api/analyze": "Upload medicine image for zero-click verification",
       "GET /api/history": "View scan history",
       "GET /api/medicines": "View registered medicines",
+      "GET /api/brands": "View available medicine brands",
       "GET /health": "Health check",
     },
   });
 });
-
-// ─────────────────────────────────────────────────────────────────
-// Error Handler
-// ─────────────────────────────────────────────────────────────────
 
 app.use((err, req, res, next) => {
   console.error("Unhandled error:", err.message);
   res.status(500).json({ error: "Internal server error", details: err.message });
 });
 
-// ─────────────────────────────────────────────────────────────────
-// Start Server
-// ─────────────────────────────────────────────────────────────────
+async function startServer() {
+  try {
+    await mongoose.connect(MONGO_URI);
+    console.log("Connected to MongoDB:", SAFE_MONGO_URI);
+    await syncTruthLedgerSeedData();
 
-app.listen(PORT, () => {
-  console.log(`\n${"═".repeat(50)}`);
-  console.log(` 🛡️  OptiPharma Gateway`);
-  console.log(` 📡  Port: ${PORT}`);
-  console.log(` 🐍  Python Service: ${PYTHON_SERVICE_URL}`);
-  console.log(` 🗄️   MongoDB: ${SAFE_MONGO_URI}`);
-});
+    app.listen(PORT, () => {
+      console.log(`\n${"=".repeat(50)}`);
+      console.log(" OptiPharma Gateway");
+      console.log(` Port: ${PORT}`);
+      console.log(` Python Service: ${PYTHON_SERVICE_URL}`);
+      console.log(` MongoDB: ${SAFE_MONGO_URI}`);
+    });
+  } catch (err) {
+    console.error("MongoDB connection failed:", err.message);
+    process.exit(1);
+  }
+}
+
+startServer();
