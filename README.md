@@ -1,205 +1,230 @@
 # OptiPharma
 
-[![React](https://img.shields.io/badge/Frontend-React%2018-61DAFB?logo=react&logoColor=white)](./frontend)
-[![Tailwind CSS](https://img.shields.io/badge/UI-Tailwind%20CSS-06B6D4?logo=tailwindcss&logoColor=white)](./frontend)
-[![Node.js](https://img.shields.io/badge/Gateway-Node.js%20%2B%20Express-339933?logo=node.js&logoColor=white)](./backend)
-[![MongoDB](https://img.shields.io/badge/Database-MongoDB%20Truth%20Ledger-47A248?logo=mongodb&logoColor=white)](./backend)
-[![Python](https://img.shields.io/badge/AI%20Microservice-Python%20%2B%20FastAPI-3776AB?logo=python&logoColor=white)](./microservice)
-[![OpenCV](https://img.shields.io/badge/Computer%20Vision-OpenCV-5C3EE8?logo=opencv&logoColor=white)](./microservice)
+<div align="center">
 
-OptiPharma is a counterfeit medicine detection platform built for the IIT-BHU Codecure Hackathon, Techno-Pharma track. It combines deterministic computer vision, multimodal LLM reasoning, and a secure pharmaceutical Truth Ledger to verify whether a physical medicine strip matches its official formulation.
+### Counterfeit medicine detection with hybrid computer vision, multimodal AI, and a live geospatial threat radar
 
-This is not a basic OCR wrapper. OptiPharma is a multi-stage authenticity pipeline that cross-checks visual structure, extracted foil text, and expected active ingredients before returning a verdict to a live threat analysis dashboard.
+[![Frontend](https://img.shields.io/badge/Frontend-React_18_%2B_Vite-61DAFB?logo=react&logoColor=white)](./frontend)
+[![UI](https://img.shields.io/badge/UI-Tailwind_CSS_%2B_Framer_Motion-06B6D4?logo=tailwindcss&logoColor=white)](./frontend)
+[![Gateway](https://img.shields.io/badge/Gateway-Node.js_%2B_Express-339933?logo=node.js&logoColor=white)](./backend)
+[![Database](https://img.shields.io/badge/Database-MongoDB_%2B_Mongoose-47A248?logo=mongodb&logoColor=white)](./backend)
+[![Microservice](https://img.shields.io/badge/AI%2FCV-FastAPI_%2B_OpenCV-3776AB?logo=python&logoColor=white)](./microservice)
+[![Radar](https://img.shields.io/badge/God_View-React_Leaflet_%2B_Live_History-C41E3A)](./frontend/src/components/ThreatMap.jsx)
 
-## Elevator Pitch
+</div>
 
-Counterfeit pharmaceuticals are not just a supply-chain problem; they are a patient safety problem. OptiPharma addresses that risk with a pragmatic, production-minded architecture:
+OptiPharma is a hackathon-built counterfeit medicine detection platform designed for fast, explainable verification in the field. It combines a scanner-grade frontend, a Node.js gateway, a MongoDB Truth Ledger, and a Python AI/CV microservice to determine whether a scanned medicine strip is authentic, suspicious, or inconclusive.
 
-- A scanner-first React frontend captures a medicine strip from a live webcam or uploaded image.
-- A Node.js gateway enriches the request with official compound data from MongoDB.
-- A Python AI microservice runs a deterministic OpenCV gate before escalating to multimodal LLM reasoning.
-- The final decision is returned as a structured Threat Analysis Report: `VERIFIED`, `COUNTERFEIT`, or `INCONCLUSIVE`.
+This is not just OCR on top of an image upload. OptiPharma uses a layered verification pipeline:
 
-The result is a system that is fast on obvious failures, intelligent on hard cases, and resilient enough for live demo conditions.
+- a deterministic visual gate for fast rejection of obvious mismatches
+- multimodal AI extraction for real-world foil packaging and messy text
+- database-grounded compound verification against official medicine records
+- real-time scan logging and a geospatial "God View" threat radar for counterfeit hotspots
 
-## Why This Architecture Matters
+## Why It Stands Out
 
-Most hackathon demos jump directly from image upload to LLM OCR. OptiPharma does not. It uses a three-tier product architecture with a deterministic rejection gate in front of the multimodal model:
+| Capability | What it does | Why it matters |
+| --- | --- | --- |
+| Visual gate | Uses OpenCV and SSIM before AI reasoning | Reduces cost, latency, and false confidence on obvious fakes |
+| Truth Ledger | Verifies against MongoDB-backed medicine records | Prevents unconstrained model guessing |
+| AI extraction | Reads real pack text from full-strip images | More robust than brittle text-region crops |
+| God View radar | Plots counterfeit scans on a live map | Turns scan events into operational threat intelligence |
+| Graceful fallback | Keeps the demo alive during unstable external conditions | Better for hackathon reliability and live judging |
 
-1. `Capture + UX Layer`
-   React, Tailwind CSS, and Framer Motion power a scanner-grade interface optimized for live camera capture and operator review.
-2. `Gateway + Truth Ledger Layer`
-   Node.js, Express, and MongoDB resolve the expected active ingredients for a specific brand or batch before AI inference begins.
-3. `AI Verification Layer`
-   Python, FastAPI, OpenCV, and Gemini handle visual anomaly detection, text extraction, and compound verification.
+## Product Snapshot
 
-This separation keeps the system modular, auditable, and scalable.
+### Core user journey
+
+1. An operator captures or uploads a medicine strip in the React scanner.
+2. The browser optionally attaches geolocation coordinates if permission is granted.
+3. The Node.js gateway forwards the image to the Python verification service.
+4. The backend checks the Truth Ledger and saves the scan in `ScanHistory`.
+5. The UI returns a threat analysis report and the God View radar updates with new counterfeit intercepts.
+
+### Final verdicts
+
+- `VERIFIED`
+- `COUNTERFEIT`
+- `INCONCLUSIVE`
+
+## The God View
+
+The newest OptiPharma capability is the God View: a live, dark-mode geospatial radar for counterfeit activity.
+
+- pulls from `GET /api/history?verdict=COUNTERFEIT`
+- filters only scans with valid `latitude` and `longitude`
+- renders pulsing red intercept markers on a Leaflet map
+- shows `brandName`, `batchNumber`, and scan time in each popup
+- updates the narrative from "single scan analysis" to "network-wide threat visibility"
+
+This turns OptiPharma from a verification demo into a lightweight command-center concept for pharma supply chain monitoring.
+
+## Architecture
+
+```mermaid
+flowchart LR
+    A[React Scanner UI\nCamera or upload] --> B[Optional geolocation\nlatitude + longitude]
+    A --> C[Node.js Gateway\nPOST /api/analyze]
+    B --> C
+
+    C --> D[(MongoDB Truth Ledger)]
+    D -->|medicine records| C
+
+    C --> E[Python FastAPI Microservice\nPOST /api/analyze]
+    E --> F[OpenCV preprocessing\nalignment + SSIM gate]
+    F -->|visual fail| G[Counterfeit or reject path]
+    F -->|visual pass| H[Multimodal OCR + reasoning]
+    H --> I[Compound verification]
+    D -->|expected compounds| I
+
+    G --> J[ScanHistory log]
+    I --> J
+
+    J --> K[Threat analysis dashboard]
+    J --> L[God View radar\n/api/history?verdict=COUNTERFEIT]
+```
+
+## What Happens In One Scan
+
+### 1. Image acquisition
+
+The frontend supports:
+
+- live webcam capture with a scanner-style UI
+- image upload fallback for stored inspection photos
+- optional browser geolocation with a 5-second timeout
+
+If the user denies location permissions, the scan still proceeds normally. The only difference is that the event will not appear on the geospatial map.
+
+### 2. Gateway orchestration
+
+The Express gateway:
+
+- receives `multipart/form-data`
+- validates the image
+- normalizes optional `latitude` and `longitude`
+- queries MongoDB for the matching medicine record
+- forwards the scan to the Python service
+- logs the final result in `ScanHistory`
+
+### 3. Deterministic CV gate
+
+The Python microservice performs early visual checks such as:
+
+- preprocessing
+- contour and alignment support
+- SSIM-based similarity checks
+
+This acts as a fast, deterministic filter before the heavier multimodal stage.
+
+### 4. Multimodal verification
+
+If the image passes the visual gate, the microservice sends the full strip image through the AI reasoning path to extract:
+
+- brand context
+- batch data
+- raw OCR text
+- compounds or medicine cues from packaging
+
+### 5. Database-grounded decision
+
+The extracted evidence is compared against MongoDB Truth Ledger data such as:
+
+- brand name
+- batch number
+- expected compounds
+- manufacturer metadata
+
+### 6. Threat intelligence output
+
+The final report and scan history record power:
+
+- the frontend threat dashboard
+- historical query endpoints
+- the God View radar for counterfeit intercept clustering
 
 ## Tech Stack
 
 | Layer | Stack | Responsibility |
 | --- | --- | --- |
-| Frontend | React, Vite, Tailwind CSS, Framer Motion | Clinical scanner UI, webcam capture, live threat dashboard |
-| Gateway | Node.js, Express, Multer, Axios | Request orchestration, MongoDB lookup, scan forwarding, result logging |
-| Database | MongoDB, Mongoose | Truth Ledger for official medicines and scan history |
-| AI/CV Microservice | Python, FastAPI, OpenCV, scikit-image, Pillow | SSIM gate, image preprocessing, multimodal verification pipeline |
-| Multimodal Model | Google Gemini API | Gemini 2.5 Flash-class full-frame text extraction and semantic compound verification |
+| Frontend | React 18, Vite, Tailwind CSS, Framer Motion, React Webcam | Scanner UX, dashboard, result rendering |
+| Map layer | React Leaflet, Leaflet | Live counterfeit geospatial radar |
+| Gateway | Node.js, Express, Multer, Axios | Request orchestration, logging, history APIs |
+| Database | MongoDB, Mongoose | Truth Ledger and scan history persistence |
+| AI/CV microservice | FastAPI, OpenCV, scikit-image, Pillow, NumPy | CV gate, analysis pipeline, response shaping |
+| Multimodal reasoning | Gemini-powered integration | OCR and semantic verification path |
 
-> Note  
-> The repository is wired against the Google Gemini API through `microservice/gemini_client.py`. For the hackathon narrative and deployment target, the multimodal OCR path is positioned around Gemini 2.5 Flash-class reasoning. If you want to change the configured model name locally, update `MODEL_NAME` in [`microservice/gemini_client.py`](./microservice/gemini_client.py).
-
-## Architecture and Data Flow
-
-```mermaid
-flowchart LR
-    A[React Scanner UI\nWebcam or image upload] --> B[Node.js Gateway\nPOST /api/scan]
-    B --> C[(MongoDB Truth Ledger)]
-    C -->|Brand or batch lookup| B
-    B --> D[Python FastAPI Microservice\nPOST /api/analyze]
-
-    D --> E[OpenCV Tier 1\nGaussian Blur\nCanny Edge Detection\nPerspective Warp\nSSIM Gate]
-    E -->|SSIM < 0.95| F[Immediate Visual Counterfeit Rejection]
-    E -->|SSIM >= 0.95| G[Gemini 2.5 Flash Tier 2\nFull-image OCR and reasoning]
-
-    C -->|Expected compounds| H[Compound Verification]
-    G -->|Extracted compounds and raw text| H
-    H --> I[ThreatReport\nVERIFIED or COUNTERFEIT]
-
-    F --> J[Gateway logs scan history]
-    I --> J
-    J --> K[React Threat Analysis Dashboard]
-```
-
-## End-to-End Verification Flow
-
-### 1. Capture
-
-The React frontend captures a live webcam image of a medicine strip or accepts an uploaded image. The operator also provides a brand name and, optionally, a batch number.
-
-### 2. Database Lookup
-
-The Node gateway queries MongoDB, the OptiPharma Truth Ledger, to retrieve the expected active ingredients and reference logo for that medicine. This creates an official verification baseline before any LLM reasoning occurs.
-
-### 3. Tier 1: The Deterministic Gate
-
-The Python microservice runs a classical computer vision pipeline:
-
-- Gaussian blur for noise control
-- Canny edge detection for contour isolation
-- Perspective warp for strip alignment
-- SSIM comparison against a verified logo/layout reference
-
-If SSIM falls below `0.95`, the sample is instantly rejected as a visual counterfeit without spending LLM tokens.
-
-### 4. Tier 2: The Deep Reasoner
-
-If the sample passes the OpenCV gate, the pipeline sends the full uncropped high-resolution image to the Gemini 2.5 Flash multimodal stage. This is deliberate: instead of relying on brittle text-region cropping, OptiPharma lets the model find and read the chemical text directly from the real foil surface.
-
-### 5. Compound Verification
-
-The compounds extracted from the strip are compared against the expected compounds from MongoDB. The system then computes a match percentage and determines whether the physical strip aligns with the official pharmaceutical record.
-
-### 6. Response
-
-The frontend dashboard renders a structured Threat Analysis Report with:
-
-- final verdict
-- confidence score
-- SSIM evidence
-- extracted text
-- compound verification result
-- processing time
-
-## Standout Features and Technical Flexes
-
-### Hybrid Efficiency
-
-OptiPharma does not waste expensive LLM calls on obvious counterfeits. The OpenCV SSIM gate acts as a first-pass rejector, which reduces API cost, lowers latency, and gives the system a clear deterministic layer before probabilistic reasoning.
-
-### Multimodal Robustness
-
-Instead of depending on fragile OpenCV text cropping, the pipeline now sends the full high-resolution strip image to the multimodal model. This is a stronger approach for messy, real-world foil backgrounds, lighting reflections, and partial text visibility.
-
-### Truth Ledger Verification
-
-The system does not ask the LLM to hallucinate what a drug should contain. The source of truth lives in MongoDB. Gemini extracts evidence from the physical strip; MongoDB defines the official expected composition.
-
-### Hackathon Safety Net
-
-The Python microservice includes explicit fallback handling for rate limits, transient API failures, or unreliable Wi-Fi during a live presentation. Instead of crashing the demo, the pipeline degrades gracefully and keeps the presentation flow intact.
-
-### Auditability and Traceability
-
-Every scan can be logged into `ScanHistory`, including verdict, SSIM score, compound match percentage, extracted text, rejection reason, and processing time. This turns a demo into something much closer to an operational compliance tool.
-
-## Repository Structure
+## Repository Layout
 
 ```text
 OptiPharma/
-|-- frontend/        # React scanner UI and threat dashboard
-|-- backend/         # Node.js gateway, MongoDB models, seed data
-|-- microservice/    # FastAPI + OpenCV + Gemini verification pipeline
+|-- backend/
+|   |-- models/
+|   |-- seed.js
+|   `-- server.js
+|-- frontend/
+|   |-- src/components/
+|   |   |-- Scanner.jsx
+|   |   |-- ThreatDashboard.jsx
+|   |   `-- ThreatMap.jsx
+|   `-- vite.config.js
+|-- microservice/
+|   |-- main.py
+|   |-- cv_pipeline.py
+|   `-- requirements.txt
 `-- README.md
 ```
 
-## Local Setup
+## Quick Start
 
 ### Prerequisites
 
-Install the following before starting:
-
 - Node.js 18+
 - Python 3.10+
-- MongoDB Community Edition or MongoDB Atlas
-- A Google Gemini API key
+- MongoDB local instance or Atlas
+- A valid Gemini API key
 
-### 1. Clone the Repository
+### 1. Clone the repository
 
 ```bash
 git clone <your-repo-url>
 cd OptiPharma
 ```
 
-### 2. Configure the Python AI/CV Microservice
-
-Create the environment file:
+### 2. Start the Python AI/CV microservice
 
 ```bash
 cd microservice
-```
-
-Create `microservice/.env`:
-
-```env
-GEMINI_API_KEY=your_google_gemini_api_key
-```
-
-Create a virtual environment and install dependencies:
-
-```bash
 python -m venv .venv
 ```
 
-Activate it:
+Activate the environment:
 
 ```bash
 # Windows PowerShell
-.venv\Scripts\Activate.ps1
+.\.venv\Scripts\Activate.ps1
 
 # macOS / Linux
 source .venv/bin/activate
 ```
 
-Install packages:
+Install dependencies:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-Run the FastAPI microservice on port `8000`:
+Create `microservice/.env`:
+
+```env
+GEMINI_API_KEY=your_gemini_api_key
+```
+
+Run the service:
 
 ```bash
-uvicorn main:app --reload --port 8000
+python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 Health check:
@@ -208,9 +233,9 @@ Health check:
 curl http://localhost:8000/health
 ```
 
-### 3. Configure the Node.js Gateway and MongoDB Truth Ledger
+### 3. Start the Node.js gateway
 
-Open a new terminal:
+Open a second terminal:
 
 ```bash
 cd backend
@@ -243,7 +268,7 @@ Health check:
 curl http://localhost:5000/health
 ```
 
-### 4. Configure the React Frontend
+### 4. Start the frontend
 
 Open a third terminal:
 
@@ -253,17 +278,15 @@ npm install
 npm run dev
 ```
 
-The Vite dev server runs on:
+Open:
 
 ```text
 http://localhost:5173
 ```
 
-The frontend is already configured to proxy `/api` requests to the Node gateway on `http://localhost:5000`.
+The frontend is configured to proxy `/api` requests to `http://localhost:5000` through Vite.
 
 ## Recommended Startup Order
-
-Start the system in this order:
 
 1. MongoDB
 2. Python microservice on `:8000`
@@ -272,66 +295,71 @@ Start the system in this order:
 
 ## Environment Variables
 
-| Service | Variable | Required | Default | Purpose |
+| Service | Variable | Required | Default | Description |
 | --- | --- | --- | --- | --- |
-| `microservice` | `GEMINI_API_KEY` | Yes | None | Authenticates Gemini multimodal API calls |
+| `microservice` | `GEMINI_API_KEY` | Yes | None | Auth for the multimodal AI path |
 | `backend` | `PORT` | No | `5000` | Express gateway port |
 | `backend` | `MONGO_URI` | Yes | `mongodb://localhost:27017/optipharma` | MongoDB connection string |
-| `backend` | `PYTHON_SERVICE_URL` | No | `http://localhost:8000` | FastAPI microservice base URL |
+| `backend` | `PYTHON_SERVICE_URL` | No | `http://localhost:8000` | Base URL for the FastAPI service |
 
-## Core API Surfaces
+## Key API Surfaces
 
-### Frontend to Gateway
+### Gateway endpoints
 
-- `POST /api/scan`
-  Accepts the uploaded image plus brand and optional batch metadata.
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| `POST` | `/api/analyze` | Primary scan endpoint used by the frontend |
+| `POST` | `/api/scan` | Alias for scan ingestion |
+| `GET` | `/api/history` | Returns recent scan history |
+| `GET` | `/api/medicines` | Returns active Truth Ledger medicines |
+| `GET` | `/api/brands` | Returns distinct brand names |
+| `GET` | `/health` | Service health check |
 
-### Gateway to Frontend
+### Microservice endpoints
 
-- `GET /api/history`
-  Returns the latest scan history for analytics and operator review.
-- `GET /api/medicines`
-  Returns active Truth Ledger medicine entries.
-- `GET /health`
-  Operational status for the gateway.
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| `POST` | `/api/analyze` | Hybrid CV + AI analysis |
+| `GET` | `/health` | Microservice health check |
 
-### Gateway to Microservice
+## Request And Logging Model
 
-- `POST /api/analyze`
-  Sends the image, expected compounds, brand context, batch number, and reference logo to the AI/CV pipeline.
+### Frontend scan payload
 
-### Microservice Health
+The scanner sends `multipart/form-data` to `POST /api/analyze` with:
 
-- `GET /health`
-  Operational status for the AI/CV service.
+- `image`
+- optional `latitude`
+- optional `longitude`
 
-## Truth Ledger Design
+### `ScanHistory` stores
 
-The MongoDB `Medicine` collection stores:
+- `batchNumber`
+- `brandName`
+- `verdict`
+- `ssimScore`
+- `confidence`
+- `extractedText`
+- `compoundMatch`
+- `compoundMatchPercentage`
+- `rejectionReason`
+- `processingTimeMs`
+- `latitude`
+- `longitude`
+- `ipAddress`
+- `scannedAt`
 
-- batch number
-- brand name
-- manufacturer
-- expected compounds
-- expiry date
-- reference logo filename
-- product category
+## Demo Flow For Judges
 
-The MongoDB `ScanHistory` collection stores:
+1. Open the scanner and capture a medicine strip.
+2. Run analysis and show the verdict dashboard.
+3. Highlight extracted brand, batch, SSIM evidence, and compound verification.
+4. Open the God View section and point to counterfeit intercept markers.
+5. Explain that each radar point is a persisted scan event, not just frontend mock data.
 
-- verdict
-- SSIM score
-- extracted text
-- compound match percentage
-- rejection reason
-- processing time
-- timestamp
+## Seeded Demo Medicines
 
-This enables both verification and traceable operational analytics.
-
-## Demo Data Included
-
-The seed file includes multiple representative medicines, including:
+The included seed data gives you a usable starting Truth Ledger for demos and local testing. The current dataset includes medicines such as:
 
 - PAN 40
 - Dolo 650
@@ -340,35 +368,80 @@ The seed file includes multiple representative medicines, including:
 - Glycomet-GP 1
 - OptiCillin
 
-These are inserted into the MongoDB Truth Ledger through:
+Seed command:
 
 ```bash
 cd backend
 npm run seed
 ```
 
-## Why Judges Should Care
+## Troubleshooting
 
-OptiPharma demonstrates the kind of architecture that can move beyond a hackathon:
+### Port `8000` already in use
 
-- deterministic CV for cost-efficient screening
-- multimodal reasoning for messy real-world packaging
-- database-grounded verification instead of unconstrained LLM output
-- typed service contracts across all layers
-- graceful degradation under live-demo failure conditions
+If the Python microservice fails with a socket bind error on Windows, something else is already listening on port `8000`.
 
-This is not a single-model demo. It is a system design for pharmaceutical authenticity verification.
+You can either:
 
-## Future Roadmap
+- stop the existing process using Task Manager or `taskkill /PID <pid> /F`
+- run the microservice on another port, such as `8001`, and update `PYTHON_SERVICE_URL` in `backend/.env`
 
-- batch-specific ledger verification with manufacturer-side signing
-- offline-first capture workflows for field inspections
-- analytics dashboard for counterfeit hotspot detection
-- barcode and QR cross-validation
-- confidence calibration with larger reference datasets
+Example:
 
-## Team
+```bash
+python -m uvicorn main:app --host 0.0.0.0 --port 8001 --reload
+```
 
-Built for IIT-BHU Codecure Hackathon, Techno-Pharma track.
+```env
+PYTHON_SERVICE_URL=http://localhost:8001
+```
 
-If you are reviewing this project as a judge, the core takeaway is simple: OptiPharma turns a phone or laptop camera into a multi-stage pharmaceutical verification workflow grounded in computer vision, multimodal AI, and a verifiable database of truth.
+### Geolocation denied
+
+This is expected behavior, not a bug. The scan still completes, but that scan will not be plotted on the God View map.
+
+### Frontend `npm` blocked in PowerShell
+
+If PowerShell blocks `npm.ps1`, use:
+
+```bash
+npm.cmd install
+npm.cmd run dev
+```
+
+### No medicines appearing in verification
+
+Re-run the seed step:
+
+```bash
+cd backend
+npm run seed
+```
+
+## Why This Matters
+
+Counterfeit pharmaceuticals are not just a supply-chain inconvenience. They are a direct patient safety threat. OptiPharma frames the problem the right way:
+
+- verify physical packaging evidence
+- ground decisions in official data
+- keep an audit trail
+- surface geographic threat patterns in real time
+
+That combination makes the project compelling both as a hackathon demo and as a blueprint for a more operational anti-counterfeit platform.
+
+## Roadmap
+
+- batch-level signatures and manufacturer-side verification
+- offline-first field capture mode
+- richer hotspot analytics and clustering
+- barcode and QR validation
+- alerting workflows for repeated counterfeit intercepts
+- role-based dashboard views for regulators, distributors, and inspectors
+
+## Built For
+
+OptiPharma was built for the IIT-BHU Codecure Hackathon in the Techno-Pharma track.
+
+If you are reviewing this project quickly, the simplest summary is:
+
+> OptiPharma turns a medicine strip scan into a structured authenticity verdict, a persisted forensic record, and a live counterfeit threat signal on a map.
