@@ -77,6 +77,17 @@ const ScanHistorySchema = new mongoose.Schema(
     default: 0,
   },
 
+  // Scan location (optional when location permissions are denied)
+  latitude: {
+    type: Number,
+    required: false,
+  },
+
+  longitude: {
+    type: Number,
+    required: false,
+  },
+
   // Client IP address (for geo-analytics)
   ipAddress: {
     type: String,

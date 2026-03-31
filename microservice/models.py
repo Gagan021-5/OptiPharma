@@ -47,6 +47,7 @@ class CompoundVerification(BaseModel):
     expected_compounds: List[str] = Field(default_factory=list, description="Expected compounds from the Truth Ledger")
     match: bool = Field(default=False, description="True if all expected compounds were found")
     match_percentage: float = Field(default=0.0, description="Percentage of compounds matched")
+    notes: Optional[str] = Field(default=None, description="Optional notes from Gemini or the hackathon safety net")
 
 
 class ExtractedText(BaseModel):
@@ -68,6 +69,7 @@ class ThreatReport(BaseModel):
     verdict: Verdict = Field(..., description="Final verification verdict")
     confidence: float = Field(default=0.0, ge=0.0, le=100.0, description="Overall confidence score (%)")
     rejection_reason: Optional[str] = Field(default=None, description="Reason for counterfeit/inconclusive verdict")
+    notes: Optional[str] = Field(default=None, description="Optional pipeline notes, including hackathon fallback warnings")
 
     # Sub-reports
     ssim: SSIMResult = Field(..., description="SSIM analysis results")

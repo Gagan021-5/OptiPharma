@@ -49,6 +49,24 @@ function buildTruthLedgerMatch(medicine) {
   };
 }
 
+function hasSafetyNetNotes(report) {
+  const rootNotes = report?.notes;
+  const compoundNotes = report?.compound_verification?.notes;
+
+  return [rootNotes, compoundNotes].some(
+    (value) => typeof value === "string" && value.includes("Fallback live-demo")
+  );
+}
+
+function logSafetyNetWarning(contextLabel) {
+  console.warn("=========================================================");
+  console.warn("=========================================================");
+  console.warn("⚠️ WARNING: PYTHON HACKATHON SAFETY NET ENGAGED! AI Bypassed.");
+  console.warn(`Context: ${contextLabel}`);
+  console.warn("=========================================================");
+  console.warn("=========================================================");
+}
+
 function normalizeDetectedValue(value, { uppercase = false } = {}) {
   if (typeof value !== "string") {
     return "";
@@ -60,6 +78,19 @@ function normalizeDetectedValue(value, { uppercase = false } = {}) {
   }
 
   return uppercase ? normalizedValue.toUpperCase() : normalizedValue;
+}
+
+function normalizeCoordinate(value, { min, max }) {
+  if (value === undefined || value === null || value === "") {
+    return undefined;
+  }
+
+  const parsedValue = Number(value);
+  if (!Number.isFinite(parsedValue) || parsedValue < min || parsedValue > max) {
+    return undefined;
+  }
+
+  return parsedValue;
 }
 
 async function callPythonAnalyze({
@@ -132,7 +163,7 @@ function buildUnrecognizedBrandReport(report, { brandName = "", batchNumber = ""
   };
 }
 
-async function logScanHistoryEntry({ report, req, processingTimeMs }) {
+async function logScanHistoryEntry({ report, req, processingTimeMs, latitude, longitude }) {
   try {
     await ScanHistory.create({
       batchNumber: report.batchNumber || report.extracted_text?.batch_number || "UNKNOWN",
@@ -145,6 +176,8 @@ async function logScanHistoryEntry({ report, req, processingTimeMs }) {
       compoundMatchPercentage: report.compound_verification?.match_percentage || 0,
       rejectionReason: report.rejection_reason || null,
       processingTimeMs,
+      latitude,
+      longitude,
       ipAddress: req.ip || req.connection?.remoteAddress || "",
     });
     console.log("  Scan logged to history");
@@ -229,6 +262,9 @@ const analyzeScanRequest = async (req, res) => {
       return res.status(400).json({ error: "No image file provided" });
     }
 
+    const latitude = normalizeCoordinate(req.body?.latitude, { min: -90, max: 90 });
+    const longitude = normalizeCoordinate(req.body?.longitude, { min: -180, max: 180 });
+
     console.log(`\n${"-".repeat(50)}`);
     console.log("Scan request received");
     console.log(`  File: ${req.file.originalname} (${(req.file.size / 1024).toFixed(1)} KB)`);
@@ -238,6 +274,10 @@ const analyzeScanRequest = async (req, res) => {
       file: req.file,
       referenceLogo: "default_logo.png",
     });
+
+    if (hasSafetyNetNotes(discoveryReport)) {
+      logSafetyNetWarning("Discovery OCR response");
+    }
 
     const extractedBrandName = normalizeDetectedValue(discoveryReport.extracted_text?.brand_name);
     const extractedBatchNumber = normalizeDetectedValue(discoveryReport.extracted_text?.batch_number, {
@@ -270,6 +310,8 @@ const analyzeScanRequest = async (req, res) => {
         report: unresolvedReport,
         req,
         processingTimeMs: unresolvedReport.processing_time_ms,
+        latitude,
+        longitude,
       });
 
       return res.json(unresolvedReport);
@@ -287,6 +329,10 @@ const analyzeScanRequest = async (req, res) => {
       referenceLogo: matchedMedicine.referenceLogoFilename || "default_logo.png",
     });
 
+    if (hasSafetyNetNotes(verificationReport)) {
+      logSafetyNetWarning("Verification response");
+    }
+
     const unifiedReport = buildUnifiedReport(verificationReport, {
       matchedMedicine,
       brandName: matchedMedicine.brandName,
@@ -299,6 +345,10 @@ const analyzeScanRequest = async (req, res) => {
       processingTimeMs: Date.now() - startTime,
     });
 
+    if (hasSafetyNetNotes(unifiedReport)) {
+      logSafetyNetWarning("Unified report returned to frontend");
+    }
+
     console.log(`  Verdict: ${unifiedReport.verdict} | Confidence: ${unifiedReport.confidence}%`);
     console.log(`  Total gateway time: ${unifiedReport.processing_time_ms}ms`);
     console.log("-".repeat(50));
@@ -307,6 +357,8 @@ const analyzeScanRequest = async (req, res) => {
       report: unifiedReport,
       req,
       processingTimeMs: unifiedReport.processing_time_ms,
+      latitude,
+      longitude,
     });
 
     return res.json(unifiedReport);
@@ -405,15 +457,13 @@ app.use((err, req, res, next) => {
 async function startServer() {
   try {
     await mongoose.connect(MONGO_URI);
-    console.log("Connected to MongoDB:", SAFE_MONGO_URI);
+    console.log("Connected to MongoDB:✅", SAFE_MONGO_URI);
     await syncTruthLedgerSeedData();
 
     app.listen(PORT, () => {
-      console.log(`\n${"=".repeat(50)}`);
+      console.log(`\n${"=".repeat(20)}`);
       console.log(" OptiPharma Gateway");
       console.log(` Port: ${PORT}`);
-      console.log(` Python Service: ${PYTHON_SERVICE_URL}`);
-      console.log(` MongoDB: ${SAFE_MONGO_URI}`);
     });
   } catch (err) {
     console.error("MongoDB connection failed:", err.message);

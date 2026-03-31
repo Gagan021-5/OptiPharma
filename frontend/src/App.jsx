@@ -2,6 +2,7 @@ import { useState } from 'react';
 import Header from './components/Header';
 import Scanner from './components/Scanner';
 import ThreatDashboard from './components/ThreatDashboard';
+import ThreatMap from './components/ThreatMap';
 
 function App() {
   const [scanResult, setScanResult] = useState(null);
@@ -22,11 +23,13 @@ function App() {
         { label: 'Overview', href: '#results-overview' },
         { label: 'Metrics', href: '#results-metrics' },
         { label: 'Session', href: '#results-session' },
+        { label: 'Radar', href: '#god-view-radar' },
       ]
     : [
         { label: 'Workspace', href: '#scanner-workspace' },
         { label: 'Pipeline', href: '#scanner-workflow' },
         { label: 'Guidance', href: '#scanner-tips' },
+        { label: 'Radar', href: '#god-view-radar' },
       ];
 
   return (
@@ -44,18 +47,22 @@ function App() {
       />
 
       <main className="relative z-10 mx-auto flex w-full max-w-7xl flex-1 flex-col px-4 pb-10 pt-6 sm:px-6 sm:pb-12 sm:pt-8 lg:px-8 lg:pt-10">
-        {scanResult ? (
-          <ThreatDashboard
-            report={scanResult}
-            onNewScan={handleNewScan}
-          />
-        ) : (
-          <Scanner
-            onScanComplete={handleScanComplete}
-            isScanning={isScanning}
-            setIsScanning={setIsScanning}
-          />
-        )}
+        <div className="space-y-6 sm:space-y-8">
+          {scanResult ? (
+            <ThreatDashboard
+              report={scanResult}
+              onNewScan={handleNewScan}
+            />
+          ) : (
+            <Scanner
+              onScanComplete={handleScanComplete}
+              isScanning={isScanning}
+              setIsScanning={setIsScanning}
+            />
+          )}
+
+          <ThreatMap />
+        </div>
       </main>
 
       <footer className="relative z-10 border-t border-white/6 bg-pharma-slate-900/70 backdrop-blur-xl">

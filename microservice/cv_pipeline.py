@@ -394,6 +394,7 @@ async def run_pipeline(
     compound_result = None
     final_verdict = Verdict.VERIFIED
     rejection = None
+    report_notes = None
     
     if expected_compounds:
         # We have expected compounds from MongoDB — verify against extraction
@@ -416,7 +417,9 @@ async def run_pipeline(
             expected_compounds=expected_compounds,
             match=verification.get("match", False),
             match_percentage=verification.get("match_percentage", 0),
+            notes=verification.get("notes"),
         )
+        report_notes = verification.get("notes")
         
         if not compound_result.match:
             final_verdict = Verdict.COUNTERFEIT
@@ -429,6 +432,7 @@ async def run_pipeline(
             expected_compounds=[],
             match=False,
             match_percentage=0,
+            notes=None,
         )
         # Still mark as verified if SSIM passed and we got clean OCR
         if gemini_result.get("confidence", 0) > 0.5:
@@ -446,6 +450,7 @@ async def run_pipeline(
         verdict=final_verdict,
         confidence=confidence,
         rejection_reason=rejection,
+        notes=report_notes,
         ssim=ssim_result,
         compound_verification=compound_result,
         extracted_text=extracted_text,

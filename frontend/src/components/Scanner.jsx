@@ -150,6 +150,57 @@ export default function Scanner({ onScanComplete, isScanning, setIsScanning }) {
     return new File([array], filename, { type: mime });
   };
 
+  const getCurrentCoordinates = () =>
+    new Promise((resolve) => {
+      if (typeof navigator === 'undefined' || !navigator.geolocation) {
+        console.warn('Geolocation is unavailable. Continuing scan without coordinates.');
+        resolve(null);
+        return;
+      }
+
+      let settled = false;
+      let timeoutId = null;
+
+      const finalize = (coordinates = null, warning = null) => {
+        if (settled) {
+          return;
+        }
+
+        settled = true;
+
+        if (timeoutId) {
+          window.clearTimeout(timeoutId);
+        }
+
+        if (warning) {
+          console.warn(warning);
+        }
+
+        resolve(coordinates);
+      };
+
+      timeoutId = window.setTimeout(() => {
+        finalize(null, 'Geolocation timed out after 5 seconds. Continuing scan without coordinates.');
+      }, 5000);
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          finalize({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          });
+        },
+        (geoError) => {
+          finalize(null, `Geolocation unavailable: ${geoError.message}. Continuing scan without coordinates.`);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 5000,
+          maximumAge: 60000,
+        },
+      );
+    });
+
   const handleAnalyze = async () => {
     if (!capturedImage) {
       setError('Capture or upload an image before starting the analysis.');
@@ -162,8 +213,14 @@ export default function Scanner({ onScanComplete, isScanning, setIsScanning }) {
     setDetectedBatch(EXTRACTING_COPY);
 
     try {
+      const coordinates = await getCurrentCoordinates();
       const formData = new FormData();
       formData.append('image', dataURLtoFile(capturedImage));
+
+      if (Number.isFinite(coordinates?.latitude) && Number.isFinite(coordinates?.longitude)) {
+        formData.append('latitude', String(coordinates.latitude));
+        formData.append('longitude', String(coordinates.longitude));
+      }
 
       const response = await fetch(API_URL, {
         method: 'POST',
@@ -176,6 +233,14 @@ export default function Scanner({ onScanComplete, isScanning, setIsScanning }) {
       }
 
       const report = await response.json();
+      const safetyNetNotes = report.notes || report.compound_verification?.notes || '';
+      if (typeof safetyNetNotes === 'string' && safetyNetNotes.includes('Fallback live-demo')) {
+        console.warn(
+          '%c🚨 OPTIPHARMA SAFETY NET TRIGGERED: Showing Fallback Data!',
+          'background: red; color: white; font-size: 16px; font-weight: bold; padding: 4px;',
+        );
+      }
+
       const resolvedBrand = resolveDetectedValue(report.brandName) || resolveDetectedValue(report.extracted_text?.brand_name) || NOT_DETECTED_COPY;
       const resolvedBatch = resolveDetectedValue(report.batchNumber) || resolveDetectedValue(report.extracted_text?.batch_number) || NOT_DETECTED_COPY;
 

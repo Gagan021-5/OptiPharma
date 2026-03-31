@@ -1,0 +1,515 @@
+﻿python : C:\Users\Gaga
+n\Desktop\OptiPharma\m
+icroservice\gemini_cli
+ent.py:8: 
+FutureWarning: 
+At line:1 char:1
++ python 
+debug_gemini.py 2>&1 
+| Out-File -Encoding 
+utf8 debug_output.tx 
+...
++ ~~~~~~~~~~~~~~~~~~~~
+~~~~~~~
+    + CategoryInfo    
+          : 
+NotSpecified: (C    
+:\Users\Gagan\...Futu 
+   reWarning: 
+:String) [    ], 
+RemoteException
+    + 
+FullyQualifiedError   
+ Id : 
+NativeCommandErr    or
+ 
+
+All support for the 
+`google.generativeai` 
+package has ended. It 
+will no longer be 
+receiving 
+updates or bug fixes. 
+Please switch to the 
+`google.genai` 
+package as soon as 
+possible.
+See README for more 
+details:
+
+https://github.com/goo
+gle-gemini/deprecated-
+generative-ai-python/b
+lob/main/README.md
+
+  import 
+google.generativeai 
+as genai
+EXTRACT_TEXT API 
+EXCEPTION 
+[ResourceExhausted]: 
+429 You exceeded your 
+current quota, please 
+check your plan and 
+billing details. For 
+more information on 
+this error, head to: h
+ttps://ai.google.dev/g
+emini-api/docs/rate-li
+mits. To monitor your 
+current usage, head 
+to: https://ai.dev/rat
+e-limit. 
+* Quota exceeded for 
+metric: generativelang
+uage.googleapis.com/ge
+nerate_content_free_ti
+er_requests, limit: 
+20, model: 
+gemini-2.5-flash
+Please retry in 
+58.48788619s. [links {
+  description: "Learn 
+more about Gemini API 
+quotas"
+  url: "https://ai.goo
+gle.dev/gemini-api/doc
+s/rate-limits"
+}
+, violations {
+  quota_metric: "gener
+ativelanguage.googleap
+is.com/generate_conten
+t_free_tier_requests"
+  quota_id: "GenerateR
+equestsPerDayPerProjec
+tPerModel-FreeTier"
+  quota_dimensions {
+    key: "model"
+    value: 
+"gemini-2.5-flash"
+  }
+  quota_dimensions {
+    key: "location"
+    value: "global"
+  }
+  quota_value: 20
+}
+, retry_delay {
+  seconds: 58
+}
+]
+Traceback (most 
+recent call last):
+  File "C:\Users\Gagan
+\AppData\Local\Program
+s\Python\Python313\Lib
+\site-packages\google\
+api_core\grpc_helpers.
+py", line 55, in error
+_remapped_callable
+    return 
+callable_(*args, 
+**kwargs)
+  File "C:\Users\Gagan
+\AppData\Local\Program
+s\Python\Python313\Lib
+\site-packages\grpc\_i
+nterceptor.py", line 
+277, in __call__
+    response, 
+ignored_call = 
+self._with_call(
+                      
+       
+~~~~~~~~~~~~~~~^
+        request,
+        ^^^^^^^^
+    ...<4 lines>...
+        compression=co
+mpression,
+        ^^^^^^^^^^^^^^
+^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Gagan
+\AppData\Local\Program
+s\Python\Python313\Lib
+\site-packages\grpc\_i
+nterceptor.py", line 
+332, in _with_call
+    return 
+call.result(), call
+           
+~~~~~~~~~~~^^
+  File "C:\Users\Gagan
+\AppData\Local\Program
+s\Python\Python313\Lib
+\site-packages\grpc\_c
+hannel.py", line 440, 
+in result
+    raise self
+  File "C:\Users\Gagan
+\AppData\Local\Program
+s\Python\Python313\Lib
+\site-packages\grpc\_i
+nterceptor.py", line 
+315, in continuation
+    response, call = s
+elf._thunk(new_method)
+.with_call(
+                     ~
+~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~^
+        request,
+        ^^^^^^^^
+    ...<4 lines>...
+        compression=ne
+w_compression,
+        ^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\Gagan
+\AppData\Local\Program
+s\Python\Python313\Lib
+\site-packages\grpc\_c
+hannel.py", line 
+1192, in with_call
+    return _end_unary_
+response_blocking(stat
+e, call, True, None)
+  File "C:\Users\Gagan
+\AppData\Local\Program
+s\Python\Python313\Lib
+\site-packages\grpc\_c
+hannel.py", line 
+1006, in _end_unary_re
+sponse_blocking
+    raise _InactiveRpc
+Error(state)  # 
+pytype: disable=not-in
+stantiable
+    ^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^
+grpc._channel._Inactiv
+eRpcError: 
+<_InactiveRpcError of 
+RPC that terminated 
+with:
+	status = StatusCode.R
+ESOURCE_EXHAUSTED
+	details = "You 
+exceeded your current 
+quota, please check 
+your plan and billing 
+details. For more 
+information on this 
+error, head to: https:
+//ai.google.dev/gemini
+-api/docs/rate-limits.
+ To monitor your 
+current usage, head 
+to: https://ai.dev/rat
+e-limit. 
+* Quota exceeded for 
+metric: generativelang
+uage.googleapis.com/ge
+nerate_content_free_ti
+er_requests, limit: 
+20, model: 
+gemini-2.5-flash
+Please retry in 
+58.48788619s."
+	debug_error_string = 
+"UNKNOWN:Error 
+received from peer ipv
+4:216.239.36.223:443 
+{grpc_message:"You 
+exceeded your current 
+quota, please check 
+your plan and billing 
+details. For more 
+information on this 
+error, head to: https:
+//ai.google.dev/gemini
+-api/docs/rate-limits.
+ To monitor your 
+current usage, head 
+to: https://ai.dev/rat
+e-limit. \n* Quota 
+exceeded for metric: g
+enerativelanguage.goog
+leapis.com/generate_co
+ntent_free_tier_reques
+ts, limit: 20, model: 
+gemini-2.5-flash\nPlea
+se retry in 
+58.48788619s.", 
+grpc_status:8}"
+>
+
+The above exception 
+was the direct cause 
+of the following 
+exception:
+
+Traceback (most 
+recent call last):
+  File "C:\Users\Gagan
+\Desktop\OptiPharma\mi
+croservice\gemini_clie
+nt.py", line 107, in 
+extract_text
+    response = self.mo
+del.generate_content(
+        
+[EXTRACTION_PROMPT, 
+image],
+    ...<4 lines>...
+        ),
+    )
+  File "C:\Users\Gagan
+\AppData\Local\Program
+s\Python\Python313\Lib
+\site-packages\google\
+generativeai\generativ
+e_models.py", line 
+331, in 
+generate_content
+    response = self._c
+lient.generate_content
+(
+        request,
+        
+**request_options,
+    )
+  File "C:\Users\Gagan
+\AppData\Local\Program
+s\Python\Python313\Lib
+\site-packages\google\
+ai\generativelanguage_
+v1beta\services\genera
+tive_service\client.py
+", line 835, in 
+generate_content
+    response = rpc(
+        request,
+    ...<2 lines>...
+        
+metadata=metadata,
+    )
+  File "C:\Users\Gagan
+\AppData\Local\Program
+s\Python\Python313\Lib
+\site-packages\google\
+api_core\gapic_v1\meth
+od.py", line 128, in 
+__call__
+    return 
+wrapped_func(*args, 
+**kwargs)
+  File "C:\Users\Gagan
+\AppData\Local\Program
+s\Python\Python313\Lib
+\site-packages\google\
+api_core\retry\retry_u
+nary.py", line 294, 
+in retry_wrapped_func
+    return 
+retry_target(
+        target,
+    ...<3 lines>...
+        
+on_error=on_error,
+    )
+  File "C:\Users\Gagan
+\AppData\Local\Program
+s\Python\Python313\Lib
+\site-packages\google\
+api_core\retry\retry_u
+nary.py", line 156, 
+in retry_target
+    next_sleep = 
+_retry_error_helper(
+        exc,
+    ...<6 lines>...
+        timeout,
+    )
+  File "C:\Users\Gagan
+\AppData\Local\Program
+s\Python\Python313\Lib
+\site-packages\google\
+api_core\retry\retry_b
+ase.py", line 216, in 
+_retry_error_helper
+    raise final_exc 
+from source_exc
+  File "C:\Users\Gagan
+\AppData\Local\Program
+s\Python\Python313\Lib
+\site-packages\google\
+api_core\retry\retry_u
+nary.py", line 147, 
+in retry_target
+    result = target()
+  File "C:\Users\Gagan
+\AppData\Local\Program
+s\Python\Python313\Lib
+\site-packages\google\
+api_core\timeout.py", 
+line 130, in 
+func_with_timeout
+    return 
+func(*args, **kwargs)
+  File "C:\Users\Gagan
+\AppData\Local\Program
+s\Python\Python313\Lib
+\site-packages\google\
+api_core\grpc_helpers.
+py", line 57, in error
+_remapped_callable
+    raise exceptions.f
+rom_grpc_error(exc) 
+from exc
+google.api_core.except
+ions.ResourceExhausted
+: 429 You exceeded 
+your current quota, 
+please check your 
+plan and billing 
+details. For more 
+information on this 
+error, head to: https:
+//ai.google.dev/gemini
+-api/docs/rate-limits.
+ To monitor your 
+current usage, head 
+to: https://ai.dev/rat
+e-limit. 
+* Quota exceeded for 
+metric: generativelang
+uage.googleapis.com/ge
+nerate_content_free_ti
+er_requests, limit: 
+20, model: 
+gemini-2.5-flash
+Please retry in 
+58.48788619s. [links {
+  description: "Learn 
+more about Gemini API 
+quotas"
+  url: "https://ai.goo
+gle.dev/gemini-api/doc
+s/rate-limits"
+}
+, violations {
+  quota_metric: "gener
+ativelanguage.googleap
+is.com/generate_conten
+t_free_tier_requests"
+  quota_id: "GenerateR
+equestsPerDayPerProjec
+tPerModel-FreeTier"
+  quota_dimensions {
+    key: "model"
+    value: 
+"gemini-2.5-flash"
+  }
+  quota_dimensions {
+    key: "location"
+    value: "global"
+  }
+  quota_value: 20
+}
+, retry_delay {
+  seconds: 58
+}
+]
+Loading image: C:\Users\Gagan\.gemini\antigravity\brain\5a4945ca-886d-450e-b56d-937dfb7f5a9d\amoxicillin_strip_1774900254293.png
+Image size: (1024, 1024), mode: RGB
+
+--- Calling extract_text ---
+
+--- RESULT ---
+{
+  "batch_number": "UNKNOWN",
+  "brand_name": "PAN 40",
+  "compounds": [
+    "Pantoprazole Sodium"
+  ],
+  "raw_text": "Pantoprazole Sodium Gastro-resistant Tablets IP PAN 40",
+  "confidence": 0.99
+}
+Traceback (most 
+recent call last):
+  File "C:\Users\Gagan
+\Desktop\OptiPharma\mi
+croservice\debug_gemin
+i.py", line 31, in 
+<module>
+    
+asyncio.run(main())
+    
+~~~~~~~~~~~^^^^^^^^
+  File "C:\Users\Gagan
+\AppData\Local\Program
+s\Python\Python313\Lib
+\asyncio\runners.py", 
+line 195, in run
+    return 
+runner.run(main)
+           
+~~~~~~~~~~^^^^^^
+  File "C:\Users\Gagan
+\AppData\Local\Program
+s\Python\Python313\Lib
+\asyncio\runners.py", 
+line 118, in run
+    return self._loop.
+run_until_complete(tas
+k)
+           ~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~^^^^
+^^
+  File "C:\Users\Gagan
+\AppData\Local\Program
+s\Python\Python313\Lib
+\asyncio\base_events.p
+y", line 725, in 
+run_until_complete
+    return 
+future.result()
+           
+~~~~~~~~~~~~~^^
+  File "C:\Users\Gagan
+\Desktop\OptiPharma\mi
+croservice\debug_gemin
+i.py", line 27, in 
+main
+    
+print("\n\u26a0\ufe0f 
+ FALLBACK WAS 
+TRIGGERED ù Gemini 
+call failed!")
+    ~~~~~^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Gagan
+\AppData\Local\Program
+s\Python\Python313\Lib
+\encodings\cp1252.py",
+ line 19, in encode
+    return codecs.char
+map_encode(input,self.
+errors,encoding_table)
+[0]
+           ~~~~~~~~~~~
+~~~~~~~~~~^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 
+'charmap' codec can't 
+encode characters in 
+position 2-3: 
+character maps to 
+<undefined>
